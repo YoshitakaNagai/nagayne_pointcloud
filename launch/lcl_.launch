@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<launch>
+	<!--Transform-->
+	<!-- <node pkg="tf" type="static_transform_publisher" name="centerlaser_transform" args="0 0 0 0.5235 0 0 centerlaser_ centerlaser2_ 1000" /> -->
+	<node pkg="tf" type="static_transform_publisher" name="centerlaser_transform" args="0 0 0 0 0 0 base_link centerlaser 100" />
+
+	<!--Transform PointCloud-->
+	<node pkg="sadayne_pointcloud" type="sq_transform_pointcloud" name="sq_transform_pointcloud" >
+		<param name="target_frame" type="string" value="centerlaser"/>
+	</node>
+
+	<!--lcl-->
+	<!-- <node name="sq_lcl"  pkg="sadayne_pointcloud" type="sq_lcl"> -->
+	<!-- 	<param name="save_num" type="int" value="100"/> -->
+	<!-- 	<remap from="/cloud" to="/cloud/tf" /> -->
+	<!-- </node> -->
+    <!--  -->
+	<!--rm_ground_lcl-->
+	<node name="rm_ground_lcl"  pkg="sadayne_pointcloud" type="rm_ground_lcl">
+		<param name="save_num" type="int" value="100"/>
+		<remap from="/cloud" to="/cloud/tf" />
+	</node>
+
+
+</launch>
