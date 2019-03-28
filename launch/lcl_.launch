@@ -16,7 +16,7 @@
 	</node>
     <!--  -->
 	<!--rm_ground_lcl-->
-	<!-- <node name="rm_ground_lcl_"  pkg="sadayne_pointcloud_" type="rm_ground_lcl_"> -->
+	<!-- <node name="rm_ground_lcl_"  pkg="nagayne_pointcloud_" type="rm_ground_lcl_"> -->
 	<!-- 	<param name="save_num" type="int" value="100"/> -->
 	<!-- 	<remap from="/cloud" to="/cloud/tf" /> -->
 	<!-- </node> -->
