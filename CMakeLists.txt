@@ -176,8 +176,15 @@ target_link_libraries(rm_ground_lcl_
 	${PCL_LIBRARIES}
 )
 
-add_executable(sq_curvature_ src/sq_curvature_.cpp)
-target_link_libraries(sq_curvature_
+add_executable(curvature_calculator src/curvature_calculator.cpp)
+target_link_libraries(curvature_calculator
+	${catkin_LIBRARIES}
+	${OpenCV_LIBRARIES}
+	${PCL_LIBRARIES}
+)
+
+add_executable(unflatness_calculator src/unflatness_calculator.cpp)
+target_link_libraries(unflatness_calculator
 	${catkin_LIBRARIES}
 	${OpenCV_LIBRARIES}
 	${PCL_LIBRARIES}
