@@ -23,28 +23,78 @@ double calc_rotation_speed(double delta_time, double dYAW);
 std_msgs::Float32 lidar_tfrog_vel;
 
 double delta_yaw = 0;
+double delta_yawa = 0;
+double delta_yawb = 0;
 double delta_time = 0;
+float delta_vela = 0;
+float delta_velb = 0;
 
 bool laser0_flag = false;
 bool laser1_flag = false;
 bool laser2_flag = false;
 bool calc_flag = false;
 bool first_flag = false;
+bool count0_flag = false;
+bool count1_flag = false;
+bool count2_flag = false;
+
+int counter0 = 0;
+int counter1 = 0;
+int counter2 = 0;
 
 void laser_callback(const sensor_msgs::LaserScanConstPtr &msg){
-	laser = *msg;
-	if(laser.header.frame_id == "laser1_link"){
+	 laser = *msg;
+	 if(laser.header.frame_id == "laser1_link"){
     	laser0 = laser;
 		//std::cout << "laser0.angle_increment = " << laser0.angle_increment << std::endl;
-	 	laser0_flag =true;
-		//std::cout << "laser0_flag = true" << std::endl;
-	}else if(laser.header.frame_id == "laser2_link"){
+	 	if(count0_flag){
+			delta_yawa = delta_yawb;
+			delta_yawb = delta_yaw;
+			delta_vela = delta_velb;
+			delta_velb = lidar_tfrog_vel.data;
+			laser0_flag =true;
+			//std::cout << "laser0_flag = true" << std::endl;
+		}else{
+			//std::cout << "0_else" << std::endl;
+			if(counter0 == 0){
+				counter0++;
+		 	}else if(counter0 == 1){
+				delta_yawa = delta_yaw;
+				delta_vela = lidar_tfrog_vel.data;
+				counter0++;
+		 	}else if(counter0 == 2){
+				delta_yawb = delta_yaw;
+				delta_velb = lidar_tfrog_vel.data;
+				count0_flag = true;
+		 	}
+		}
+     }else if(laser.header.frame_id == "laser2_link"){
         laser1 = laser;
-		laser1_flag =true;
-	}else if(laser.header.frame_id == "laser3_link"){
+		if(count1_flag){
+			laser1_flag =true;
+		}else{
+			if(counter1 == 0){
+				counter1++;
+		 	}else if(counter1 == 1){
+				counter1++;
+		 	}else if(counter1 == 2){
+				count1_flag = true;
+		 	}
+		}
+     }else if(laser.header.frame_id == "laser3_link"){
         laser2 = laser;
-		laser2_flag =true;
-	}
+	 	if(count2_flag){
+			laser2_flag =true;
+		}else{
+			if(counter2 == 0){
+				counter2++;
+		 	}else if(counter2 == 1){
+				counter2++;
+		 	}else if(counter2 == 2){
+				count2_flag = true;
+		 	}
+		}
+	 }
 	
 	if(laser0_flag && laser1_flag && laser2_flag && first_flag){
 		//std::cout << "a" << std::endl;
@@ -331,6 +381,10 @@ int main(int argc, char *argv[])
 			now_time = now_time_.toSec();
 			delta_time = now_time - tmp_time;
 			tmp_time = now_time;
+			//rot_speed = calc_rotation_speed(delta_time,tmp_yaw,YAW);
+			//pid_vel = pid_controller(rot_speed, turntable.max_vel, delta_time);
+			//turntable.changeVel(pid_vel);
+			//turntable.changeVel(turntable.max_vel);
 			/*
 			tmp_time = now_time;
 			tmp_yaw = YAW;
@@ -351,6 +405,15 @@ int main(int argc, char *argv[])
 				ff = true;
 			}
 			*/
+			//double a = 0.95;
+			//double filtered_rot_speed = a*tmp_rot + (1-a)*rot_speed;
+			//fprintf(outfp,"%lg,%lg\n",YAW,filtered_rot_speed);
+			//tmp_rot = rot_speed;
+			
+			//fprintf(outfp,"%lg,%d\n",YAW,scan_counter);
+			//count_flag = false;
+			//scan_counter = 0;
+
 			first_flag = true;
 		}
 		r.sleep();
