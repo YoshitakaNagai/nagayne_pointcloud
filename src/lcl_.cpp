@@ -37,9 +37,9 @@ using namespace std;
 
 typedef pcl::PointXYZI PointA;
 typedef pcl::PointCloud<PointA> CloudA;
-typedef pcl::PointCloud<PointA>::Ptr CloudAPtr;
+typedef pcl::PointCloud<PointA>::Ptr CloudAPtr; //ポインタ宣言のpointcloud
 
-CloudAPtr save_pc_ (new CloudA);
+CloudAPtr save_pc_ (new CloudA); // ポインタのpointcloud宣言であるため，動的メモリ領域の解放をする必要なし
 CloudAPtr old_pc_ (new CloudA);
 
 nav_msgs::Odometry odom_;
@@ -113,7 +113,7 @@ void pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
 
     CloudAPtr output_save_pc (new CloudA);
     Eigen::Matrix4f inverse_transform_matrix = transform_matrix.inverse();
-    pcl::transformPointCloud(*output_pc_after, *output_save_pc, inverse_transform_matrix);
+    pcl::transformPointCloud(*output_pc_after, *output_save_pc, inverse_transform_matrix); // rosmsgに直すために逆行列を使って以前の座標変換を打ち消す
 
 
     if(count_ < save_num){
@@ -138,7 +138,7 @@ void pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "sq_lcl");
+    ros::init(argc, argv, "lcl_");
     ros::NodeHandle n;
 	ros::NodeHandle nh("~");
 	nh.getParam("save_num", save_num);
