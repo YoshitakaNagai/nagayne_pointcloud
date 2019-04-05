@@ -11,13 +11,11 @@
 #include <vector>
 #include <Eigen/Core>
 
+#include "nagayne_pointcloud/point_id.h"
 
 sensor_msgs::LaserScan laser, laser0, laser1, laser2;
 
-std::vector<std::vector<double> > unevenness();
-std::vector<std::vector<double> > yaw_vec();
-
-void get_sum_of_range_difference();
+void unflatness_calc();
 double calc_rotation_speed(double delta_time, double dYAW);
 
 std_msgs::Float32 lidar_tfrog_vel;
@@ -48,7 +46,7 @@ void laser_callback(const sensor_msgs::LaserScanConstPtr &msg){
 	
 	if(laser0_flag && laser1_flag && laser2_flag && first_flag){
 		//std::cout << "a" << std::endl;
-		get_sum_of_range_difference();
+		unflatness_calc();
 		calc_flag = true;
 	}
 }
@@ -66,7 +64,7 @@ float calc_polar2rectangular_y(float theta, float range){
 	return range*sin(theta);
 }
 
-void get_sum_of_range_difference(){
+void unflatness_calc(){
 	float k = 1.0;
 	//laser0
 	//p(x,y)
