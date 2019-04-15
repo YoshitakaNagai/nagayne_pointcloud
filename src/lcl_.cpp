@@ -15,7 +15,10 @@ author : Yudai Sadakuni
 #include <ros/ros.h>
 #include <pcl/point_cloud.h>
 #include <pcl_ros/point_cloud.h>
+#include <pcl/PCLHeader.h>
 #include <std_msgs/Header.h>
+#include "std_msgs/String.h"
+#include "std_msgs/Float32MultiArray.h"
 #include <sensor_msgs/PointCloud2.h>
 #include <nav_msgs/Odometry.h>
 #include <boost/thread.hpp>
@@ -33,11 +36,14 @@ author : Yudai Sadakuni
 #include <omp.h>
 #endif
 
+#include "nagayne_pointcloud/point_id.h"
+
 using namespace std;
 
 typedef pcl::PointXYZI PointA;
 typedef pcl::PointCloud<PointA> CloudA;
 typedef pcl::PointCloud<PointA>::Ptr CloudAPtr; //ポインタ宣言のpointcloud
+
 
 CloudAPtr save_pc_ (new CloudA); // ポインタのpointcloud宣言であるため，動的メモリ領域の解放をする必要なし
 CloudAPtr old_pc_ (new CloudA);
@@ -48,6 +54,7 @@ nav_msgs::Odometry init_odom_;
 nav_msgs::Odometry sq_time;
 
 ros::Publisher pub;
+//ros::Publisher array_pub;
 
 ros::Publisher pub_sq_time;
 
@@ -89,6 +96,9 @@ void lcl_callback(nav_msgs::Odometry msg){
 
 void pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
 {
+	
+	std::cout << "lcl_" << msg << std::endl;
+
     cout<<"------------"<<endl;
     CloudAPtr single_pc_(new CloudA);
     pcl::fromROSMsg(*msg, *single_pc_);
@@ -99,6 +109,8 @@ void pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
     pcl::transformPointCloud(*single_pc_, *output_pc, transform_matrix);
 
     CloudAPtr output_pc_after (new CloudA);
+
+	cout << output_pc_after->header.stamp << std::endl;
 
     for(size_t i=0;i<single_pc_->points.size();i++){
         double distance = sqrt(pow(single_pc_->points[i].x, 2)+
@@ -115,16 +127,21 @@ void pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
     Eigen::Matrix4f inverse_transform_matrix = transform_matrix.inverse();
     pcl::transformPointCloud(*output_pc_after, *output_save_pc, inverse_transform_matrix); // rosmsgに直すために逆行列を使って以前の座標変換を打ち消す
 
-
-    if(count_ < save_num){
+	//std_msgs::Float32MultiArray cloud_array;
+	//cloud_array.data.resize(save_num);
+    
+	if(count_ < save_num){
         *save_pc_ += *output_save_pc;
         old_pc_ = output_save_pc;
+		//cloud_array.data[count_] = output_save_pc;
+		count_++;
     }else{
         int old_pc_size = (int)old_pc_->points.size();
         save_pc_->points.erase(save_pc_->points.begin(), save_pc_->points.begin()+old_pc_size);
         *save_pc_ += *output_save_pc;
         old_pc_ = output_save_pc;
     }
+	//pcl_pub.publish(save_pc_); // publish PCL pointcloud
 
     sensor_msgs::PointCloud2 pc_;
     pcl::toROSMsg(*save_pc_, pc_);
@@ -133,8 +150,8 @@ void pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
     // pc_.header.frame_id = "/odom3d";	//変更
     pub.publish(pc_);
 
-    count_++;
 }
+
 
 int main(int argc, char** argv)
 {
@@ -143,9 +160,11 @@ int main(int argc, char** argv)
 	ros::NodeHandle nh("~");
 	nh.getParam("save_num", save_num);
 
-    ros::Subscriber sub_pc = n.subscribe("/cloud", 30, pc_callback);
+    ros::Subscriber sub_pc = n.subscribe("/nagayne_PointCloud2/from_LaserScan", 30, pc_callback);
     ros::Subscriber sub_lcl = n.subscribe("/odom", 30, lcl_callback);
     pub = n.advertise<sensor_msgs::PointCloud2>("/cloud/lcl", 30);
+    //array_pub = n.advertise<std_msgs::Float32MultiArray>("/nagayne_pointcloud/array", 100);
+    //pcl_pub = n.advertise<CloudA>("/nagayne_pointcloud/pcl", 100);
 
     nav_msgs::Odometry init_odom;
     init_odom.header.frame_id = "/map";

@@ -1,0 +1,89 @@
+<launch>
+	<param name="use_sim_time" value="true"/>
+
+	<node name="sq_laser2pointcloud" pkg="sq_lidar" type="sq_laser2pointcloud">
+		<param name="fixed_frame" value="base_link" />
+		<!-- <remap from="~/scan" to="/sq_lidar/scan" /> -->
+		<!-- <remap from="~/cloud" to="/cloud" /> -->
+		<!-- <remap from="~/cloud" to="/cloud" /> -->
+	</node>
+	
+	<node pkg="nagayne_pointcloud" name="unflatness_calculator" type="unflatness_calculator"/>
+	
+	<!-- <include file="$(find sadayne_pointcloud)/launch/lcl.launch"/> -->
+	<include file="$(find nagayne_pointcloud)/launch/lcl_.launch"/>
+	<include file="$(find nagayne_pointcloud)/launch/nagayne_score.launch"/>
+
+
+
+
+
+
+
+
+
+
+
+	<!-- <include file="$(find sq_lidar)/launch/human_detection_3dlidar.launch"/> -->
+
+
+
+
+
+
+
+
+
+
+	<!-- <node pkg="clustering" name="cpu_clustering_sq1" type="cpu_clustering_sq1"> -->
+	<!-- 	<remap from="/rm_ground" to="/cloud/lcl"/> -->
+	<!-- </node> -->
+	<!-- <node pkg="sq_lidar" name="sq_lidar" type="sq_lidar"/> -->
+	<!-- <node pkg="human_detection" name="sq1_human_detection_v2" type="sq1_human_detection_v2"/> -->
+	
+	<!-- viz_unflatness -->
+	<!-- <node pkg="sq_lidar" name="unflatness_publisher" type="unflatness_publisher"/> -->
+	<!-- <node pkg="sadayne_pointcloud" name="sq_curvature" type="sq_curvature" output="screen"/> -->
+	<!-- <node pkg="beginner_tutorials" name="pc_normals" type="pc_normals" output="screen"/> -->
+	
+	<!-- 1derection -->
+	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/nagai_turn_koteisiki.bag"/> -->
+	
+	<!-- scan arround -->
+	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/scripts/10.bag"/> -->
+
+	<!-- noncontrol -->
+	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/SQ2D.bag"/> -->
+
+	<!-- DSC_avr_speed -->
+	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/avr_true.bag"/> -->
+
+	<!-- default_speed for reserching border distance of human_detection -->
+	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/scripts/2018&#45;10&#45;25&#45;21&#45;15&#45;26.bag"/> -->
+
+	<!-- default_speed for reserching border distance of human_detection -->
+	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/1127/dsc05.bag"/> -->
+
+	<!-- default_speed for reserching border distance of human_detection -->
+	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/1127/dsc05zure.bag"/> -->
+
+	<!-- default_speed for reserching border distance of human_detection -->
+	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/Desktop/sotuken01/20190118/roboken_mae.bag"/> -->
+	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/Desktop/sotuken01/20/mode2_human9m_seiteki2.bag"/> -->
+	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/Desktop/sotuken01/20/mode3_seiteki.bag"/> -->
+<!-- default_speed for reserching border distance of human_detection -->
+	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/1201/def1217.bag"/> -->
+
+	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/Desktop/sotuken01/20190119/bag/hikaku2.bag"/> -->
+	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/Desktop/sotuken01/20/regular_avr.bag"/> -->
+	<node pkg="rosbag" name="player" type="play" args="--clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/move.bag"/>
+
+	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/Desktop/dkan.bag"/> -->
+	<!-- <node pkg="rviz" name="rviz" type="rviz" args="&#45;d /home/amsl/.rviz/test_sq_lidar_DSC.rviz"/> -->
+	<!-- <node pkg="rviz" name="rviz" type="rviz" args="&#45;d /home/amsl/.rviz/curvature.rviz"/> -->
+	<!-- <node pkg="rviz" name="rviz" type="rviz" args="&#45;d /home/amsl/.rviz/vector_pair.rviz"/> -->
+	<node pkg="rviz" name="rviz" type="rviz" args="-d /home/amsl/.rviz/nagayne_pointcloud.rviz"/>
+	<!-- <node pkg="rviz" name="rviz" type="rviz" args="&#45;d /home/amsl/.rviz/douteki_muri.rviz"/> -->
+	<!-- <node pkg="rviz" name="rviz" type="rviz" args="&#45;d /home/amsl/.rviz/dooooteki.rviz"/> -->
+
+</launch>

@@ -12,7 +12,7 @@
 	<!--lcl-->
 	<node name="lcl_"  pkg="nagayne_pointcloud" type="lcl_">
 		<param name="save_num" type="int" value="100"/>
-		<remap from="/cloud" to="/cloud/tf" />
+		<!-- <remap from="/cloud" to="/cloud/tf" /> -->
 	</node>
     <!--  -->
 	<!--rm_ground_lcl-->

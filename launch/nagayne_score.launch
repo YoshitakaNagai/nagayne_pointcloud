@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<launch>
+	<!--Transform-->
+	<!-- <node pkg="tf" type="static_transform_publisher" name="centerlaser_transform" args="0 0 0 0.5235 0 0 centerlaser_ centerlaser2_ 1000" /> -->
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<!-- <node pkg="tf" type="static_transform_publisher" name="centerlaser_transform" args="0 0 0 0 0 0 base_link centerlaser 100" /> -->
+    <!--  -->
+	<!-- <!&#45;&#45;Transform PointCloud&#45;&#45;> -->
+	<!-- <node pkg="nagayne_pointcloud" type="transform_pointcloud_" name="transform_pointcloud_" > -->
+	<!-- 	<param name="target_frame" type="string" value="centerlaser"/> -->
+	<!-- </node> -->
+
+	<!--lcl-->
+	<node name="density_controll_of_pointcloud"  pkg="nagayne_pointcloud" type="density_controll_of_pointcloud" output="screen">
+		<!-- 	save_num > scan_num	 -->
+		<param name="save_num" type="int" value="1000"/>
+		<param name="scan_num" type="int" value="100"/>
+		<!-- 	score = (a*operating_time)^b + (c*unflatness)^d	 -->
+		<param name="a" type="double" value="1.0"/>
+		<param name="b" type="double" value="1.0"/>
+		<param name="c" type="double" value="1.0"/>
+		<param name="d" type="double" value="1.0"/>
+		<!-- <remap from="/cloud" to="/cloud/tf" /> -->
+	</node>
+    <!--  -->
+	<!--rm_ground_lcl-->
+	<!-- <node name="rm_ground_lcl_"  pkg="nagayne_pointcloud_" type="rm_ground_lcl_"> -->
+	<!-- 	<param name="save_num" type="int" value="100"/> -->
+	<!-- 	<remap from="/cloud" to="/cloud/tf" /> -->
+	<!-- </node> -->
+
+
+</launch>

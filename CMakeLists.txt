@@ -10,6 +10,11 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   pcl_ros
+  rostest
+  roslint
+  tf2_sensor_msgs
+  laser_geometry
+  pcl_conversions
   roscpp
   rospy
   sensor_msgs
@@ -124,9 +129,9 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES sadayne_pointcloud
-   CATKIN_DEPENDS message_runtime
+  INCLUDE_DIRS msg
+  LIBRARIES nagayne_pointcloud
+  CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
 )
 
@@ -155,6 +160,8 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/sadayne_pointcloud_node.cpp)
+
+
 add_executable(lcl_ src/lcl_.cpp)
 target_link_libraries(lcl_
 	${catkin_LIBRARIES}
@@ -190,6 +197,15 @@ target_link_libraries(unflatness_calculator
 	${OpenCV_LIBRARIES}
 	${PCL_LIBRARIES}
 )
+
+add_executable(density_controll_of_pointcloud src/density_controll_of_pointcloud.cpp)
+add_dependencies(density_controll_of_pointcloud ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(density_controll_of_pointcloud
+	${catkin_LIBRARIES}
+	${OpenCV_LIBRARIES}
+	${PCL_LIBRARIES}
+)
+
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
