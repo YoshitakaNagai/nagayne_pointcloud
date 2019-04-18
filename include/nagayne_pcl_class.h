@@ -1,0 +1,4 @@
+#ifndef NAGAYNE_PCL_CLASS_H
+#define NAGAYNE_PCL_CLASS_H
+
+
