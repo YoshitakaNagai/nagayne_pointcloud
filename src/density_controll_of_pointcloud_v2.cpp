@@ -166,7 +166,6 @@ void pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
     pcl::transformPointCloud(*output_pc_after, *output_save_pc, inverse_transform_matrix);
 
 	extra_size = output_save_pc->points.size();
-
 	pc_callback_flag = true;
 
 	if(!save_flag){
