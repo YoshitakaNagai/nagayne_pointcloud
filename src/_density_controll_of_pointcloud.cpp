@@ -37,19 +37,16 @@
 #include "nagayne_pointcloud/point_id.h"
 
 
+using namespace std;
+
 typedef pcl::PointXYZI PointA;
 typedef pcl::PointCloud<PointA> CloudA;
 typedef pcl::PointCloud<PointA>::Ptr CloudAPtr; //ポインタ宣言のpointcloud
-std::vector<CloudAPtr> CloudPtrList;
-std::vector<Eigen::Vector2f> tmpTimeList;
-std::vector<float> score;
 
 
 CloudAPtr save_pc_ (new CloudA); // ポインタのpointcloud宣言であるため，動的メモリ領域の解放をする必要なし
 CloudAPtr old_pc_ (new CloudA);
 CloudAPtr tmp_pc (new CloudA);
-CloudAPtr tmp_pc_before_downsampling (new CloudA);
-CloudAPtr tmp_1pc_after_downsampling (new CloudA);
 
 nav_msgs::Odometry odom_;
 nav_msgs::Odometry init_odom_;
@@ -73,7 +70,6 @@ int scan_num;
 bool init_lcl_flag = false;
 bool first_flag = false;
 
-float tmp_time, before_time, after_time, operating_time;
 float z_threshold = 30.0;
 float begin_time;
 double a, b, c, d;
@@ -95,6 +91,7 @@ Eigen::Matrix4f create_matrix(nav_msgs::Odometry odom_now, float reflect){
     return init_guess;
 }
 
+
 void lcl_callback(nav_msgs::Odometry msg){
     if(init_lcl_flag){
         init_odom_ = msg;
@@ -105,56 +102,13 @@ void lcl_callback(nav_msgs::Odometry msg){
 }
 
 
-float timekeeper(Eigen::Vector2f time_vec_i, Eigen::Vector2f time_vec_last){
-	return time_vec_last(0,0) - time_vec_i(1,0);
-}
-
-void calc_score(size_t list_size){
-	for(size_t i=0;i<list_size;i++){
-		*tmp_pc = *CloudPtrList.at(i);
-		operating_time = timekeeper(tmpTimeList.at(i), tmpTimeList.at(list_size-1));
-		float time_score = pow((float)a*operating_time, (float)b);
-		size_t tmp_pc_size = (size_t)tmp_pc->points.size();
-		
-		for(size_t j=0;j<tmp_pc_size;j++){
-			float unflatness_score = pow((float)c*tmp_pc->points[j].intensity, (float)d);
-			tmp_pc->points[j].intensity = unflatness_score - time_score;
-		}
-		CloudPtrList.at(i) = tmp_pc;
-	}
-}
-
-
-void pointcloud_downsampler(size_t list_size, size_t extra_size){
-	for(size_t i=0;i<list_size;i++){
-		*tmp_pc_before_downsampling += *CloudPtrList.at(i);
-	}
-	size_t tmp_ds_pc_size = tmp_pc_before_downsampling->points.size();
-	//array<float,tmp_ds_pc_size> score;
-	for(size_t i=0;i<tmp_ds_pc_size;i++){
-		score.push_back(tmp_pc_before_downsampling->points[i].intensity);
-	}
-	sort(score.begin(), score.end());
-	float border_score = score.at(extra_size);
-	
-	for(size_t i=0;i<list_size;i++){
-		*tmp_1pc_after_downsampling = *CloudPtrList.at(i);
-		size_t pc_after_size = tmp_1pc_after_downsampling->points.size();
-		for(size_t j=0;j<pc_after_size;j++){
-			if(border_score > tmp_1pc_after_downsampling->points[i].intensity && j > 0){
-				/* tmp_1pc_after_downsampling->points.erase(tmp_1pc_after_downsampling->points.begin()+j-1,tmp_1pc_after_downsampling->points.begin()+j);	 */
-				tmp_1pc_after_downsampling->points.erase(tmp_1pc_after_downsampling->points.begin()+j-1, tmp_1pc_after_downsampling->points.begin()+j);	
-			}
-		}
-		*CloudPtrList.at(i) = *tmp_1pc_after_downsampling;
-	}
-}
-
-
 void pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
 {
+    cout<<"------------"<<endl;
     CloudAPtr single_pc_(new CloudA);
     pcl::fromROSMsg(*msg, *single_pc_);
+
+    cout<<"single_pc_ : " <<single_pc_->points.size()<<endl;
 
     CloudAPtr output_pc (new CloudA);
     pcl::transformPointCloud(*single_pc_, *output_pc, transform_matrix);
@@ -165,74 +119,37 @@ void pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
         double distance = sqrt(pow(single_pc_->points[i].x, 2)+
                 pow(single_pc_->points[i].y, 2)+
                 pow(single_pc_->points[i].z, 2));
-        if(distance < 50){	//調整可 移動量を加味した上で
+        if(distance < 50){	//調整可
             //if(single_pc_->points[i].z <= z_threshold){
-            	PointA temp;
-            	output_pc_after->points.push_back(output_pc->points[i]);
-			//}
-		}
+            PointA temp;
+            output_pc_after->points.push_back(output_pc->points[i]);
+        }
     }
 
     CloudAPtr output_save_pc (new CloudA);
     Eigen::Matrix4f inverse_transform_matrix = transform_matrix.inverse();
-    pcl::transformPointCloud(*output_pc_after, *output_save_pc, inverse_transform_matrix);  
-
-	if(!first_flag){
-		before_time = begin_time;
-		after_time = msg->header.stamp.toSec();
-
-	}else{
-		before_time = tmp_time;
-		after_time = msg->header.stamp.toSec();
-	}
-
-	
-	Eigen::Vector2f tmpTime_vec(before_time,after_time);
+    pcl::transformPointCloud(*output_pc_after, *output_save_pc, inverse_transform_matrix);
 
 
-	size_t extra_pc_size = output_save_pc->points.size();
-
-	if(count_ < save_num){
-		
-		CloudPtrList.push_back(output_save_pc);
-		tmpTimeList.push_back(tmpTime_vec);
-		//old_pc_ = output_save_pc;
-		
-		CloudPtrList_size = CloudPtrList.size();		
-		
-		calc_score(CloudPtrList_size);
-		
-		if(count_ > scan_num){
-			pointcloud_downsampler(CloudPtrList_size, extra_pc_size);
-		}
-		count_++;
+    if(count_ < save_num){
+        *save_pc_ += *output_save_pc;//sadakuni
+        //*save_pc_ += *output_pc_after;//test_nagai
+        old_pc_ = output_save_pc;
     }else{
-        //int old_pc_size = (int)old_pc_->points.size();
-        //save_pc_->points.erase(save_pc_->points.begin(), save_pc_->points.begin()+old_pc_size);
-        //*save_pc_ += *output_save_pc;
-		CloudPtrList.push_back(output_save_pc);
-		CloudPtrList.erase(CloudPtrList.begin());
-		tmpTimeList.push_back(tmpTime_vec);
-		tmpTimeList.erase(tmpTimeList.begin());
-		//old_pc_ = output_save_pc;
-		CloudPtrList_size = CloudPtrList.size();	
-		calc_score(CloudPtrList_size);
-		pointcloud_downsampler(CloudPtrList_size, extra_pc_size);
-	}
+        int old_pc_size = (int)old_pc_->points.size();
+        save_pc_->points.erase(save_pc_->points.begin(), save_pc_->points.begin()+old_pc_size);
+        *save_pc_ += *output_save_pc;
+        old_pc_ = output_save_pc;
+    }
 
-	tmp_time = after_time;
-   
+    sensor_msgs::PointCloud2 pc_;
+    pcl::toROSMsg(*save_pc_, pc_);
+    pc_.header.stamp = ros::Time::now();
+    pc_.header.frame_id = msg->header.frame_id;
+    // pc_.header.frame_id = "/odom3d";	//変更
+    pub.publish(pc_);
 
-	for(size_t i=0;i<CloudPtrList_size;i++){
-		*save_pc_ += *CloudPtrList.at(i);
-	}
-
-	sensor_msgs::PointCloud2 downsampled_PointCloud2;
-    pcl::toROSMsg(*save_pc_, downsampled_PointCloud2);
-    downsampled_PointCloud2.header.stamp = ros::Time::now();
-    downsampled_PointCloud2.header.frame_id = msg->header.frame_id;
-    pub.publish(downsampled_PointCloud2);
-	std::cout << "pub" << std::endl;
+    count_++;
 }
 
 
@@ -254,10 +171,10 @@ int main(int argc, char** argv)
     ros::Subscriber sub_lcl = n.subscribe("/odom", 10, lcl_callback);
     ros::Subscriber sub_pc = n.subscribe("/nagayne_PointCloud2/from_LaserScan", 10, pc_callback);
     pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 10);
-    //array_pub = n.advertise<std_msgs::Float32MultiArray>("/nagayne_pointcloud/array", 100);
-    //pcl_pub = n.advertise<CloudA>("/nagayne_pointcloud/pcl", 100);
-
-    nav_msgs::Odometry init_odom;
+    /* ros::Subscriber sub_dc_pc = n.subscribe("/nagayne_PointCloud2/density_controlled", 10, pc_callback); */
+    
+	
+	nav_msgs::Odometry init_odom;
     init_odom.header.frame_id = "/map";
     init_odom.child_frame_id = "/base_link";
     init_odom.pose.pose.position.x = 0.0;

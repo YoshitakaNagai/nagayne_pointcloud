@@ -12,7 +12,9 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <math.h>
+#include <pcl/point_cloud.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl/PCLHeader.h>
 #include <string>
 #include <std_msgs/Float32.h>
 #include <vector>
@@ -21,7 +23,6 @@
 //#include "nagayne_pointcloud/point_id.h"
 
 sensor_msgs::LaserScan laser_sub, laser_pub;
-//nagayne_pointcloud::point_id id_msg;
 
 sensor_msgs::LaserScan unflatness_calc(sensor_msgs::LaserScan laser_data);
 
@@ -96,8 +97,8 @@ int main(int argc, char *argv[])
 {
 	ros::init(argc, argv, "unflatness_calculator");
 	ros::NodeHandle nh;
-	ros::Subscriber sq_lidar_sub = nh.subscribe("/sq_lidar/scan",100,laser_callback);
-	ros::Publisher unflatness_pub = nh.advertise<sensor_msgs::LaserScan>("/nagayne_LaserScan/unflatness",100);
+	ros::Subscriber sq_lidar_sub = nh.subscribe("/sq_lidar/scan",10,laser_callback);
+	ros::Publisher unflatness_pub = nh.advertise<sensor_msgs::LaserScan>("/nagayne_LaserScan/unflatness",10);
 	//ros::Publisher point_id_pub = nh.advertise<nagayne_pointcloud::point_id>("/nagayne_pointcloud/point_id",100);
 	
 	ros::Rate r(100);

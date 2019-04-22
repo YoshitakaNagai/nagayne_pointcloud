@@ -21,10 +21,10 @@
 	<!--lcl-->
 	<node name="density_controll_of_pointcloud"  pkg="nagayne_pointcloud" type="density_controll_of_pointcloud" output="screen">
 		<!-- 	save_num > scan_num	 -->
-		<param name="save_num" type="int" value="1000"/>
-		<param name="scan_num" type="int" value="100"/>
+		<param name="save_num" type="int" value="100"/>
+		<param name="scan_num" type="int" value="50"/>
 		<!-- 	score = (a*operating_time)^b + (c*unflatness)^d	 -->
-		<param name="a" type="double" value="1.0"/>
+		<param name="a" type="double" value="0.0"/>
 		<param name="b" type="double" value="1.0"/>
 		<param name="c" type="double" value="1.0"/>
 		<param name="d" type="double" value="1.0"/>
