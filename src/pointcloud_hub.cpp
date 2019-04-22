@@ -106,6 +106,7 @@ void FusionPC::fusion(void)
 				pc_iuts_->points[i].curvature = 0;
 			}
 			pcl::toROSMsg(*pc_iuts_, fusioned_pc);
+			fusioned_pc.header.stamp = ros::Time::now();
 			fusioned_cloud_pub.publish(fusioned_pc);
 			intensity_flag = false;
 			unflatness_flag = false;
