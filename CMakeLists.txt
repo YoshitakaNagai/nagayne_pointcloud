@@ -213,9 +213,8 @@ target_link_libraries(density_controll_of_pointcloud
 	${PCL_LIBRARIES}
 )
 
-add_executable(_density_controll_of_pointcloud src/_density_controll_of_pointcloud.cpp)
-add_dependencies(_density_controll_of_pointcloud ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(_density_controll_of_pointcloud
+add_executable(ddensity_controll_of_pointcloud src/ddensity_controll_of_pointcloud.cpp)
+target_link_libraries(ddensity_controll_of_pointcloud
 	${catkin_LIBRARIES}
 	${OpenCV_LIBRARIES}
 	${PCL_LIBRARIES}

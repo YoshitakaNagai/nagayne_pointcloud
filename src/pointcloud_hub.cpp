@@ -68,9 +68,9 @@ FusionPC::FusionPC(void)
 	intensity_flag = false;
 	unflatness_flag = false;
 
-	intensity_sub_pc = nh.subscribe("/cloud", 10, &FusionPC::intensity_callback, this);
-	unflatness_sub_pc = nh.subscribe("/nagayne_PointCloud2/unflatness", 10, &FusionPC::unflatness_callback, this);
-	fusioned_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/fusioned", 10);
+	intensity_sub_pc = nh.subscribe("/cloud", 1, &FusionPC::intensity_callback, this);
+	unflatness_sub_pc = nh.subscribe("/nagayne_PointCloud2/unflatness", 1, &FusionPC::unflatness_callback, this);
+	fusioned_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/fusioned", 1);
 }
 
 
@@ -106,7 +106,7 @@ void FusionPC::fusion(void)
 				pc_iuts_->points[i].curvature = 0;
 			}
 			pcl::toROSMsg(*pc_iuts_, fusioned_pc);
-			fusioned_pc.header.stamp = ros::Time::now();
+			//fusioned_pc.header.stamp = ros::Time::now();
 			fusioned_cloud_pub.publish(fusioned_pc);
 			intensity_flag = false;
 			unflatness_flag = false;

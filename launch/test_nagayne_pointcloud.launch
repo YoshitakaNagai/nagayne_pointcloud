@@ -1,25 +1,41 @@
 <launch>
 	<param name="use_sim_time" value="true"/>
+	
+	<!--Transform PointCloud-->
+	<node pkg="sadayne_pointcloud" type="sq_transform_pointcloud" name="sq_transform_pointcloud" >
+		<param name="target_frame" type="string" value="centerlaser_"/>
+		<remap from="/cloud" to="/nagayne_PointCloud2/fusioned" />
+	</node>
 
 	<node name="sq_laser2pointcloud" pkg="sq_lidar" type="sq_laser2pointcloud">
 		<param name="fixed_frame" value="base_link" />
-		<!-- <remap from="~/nagayne_LaserScan/unflatness" to="/sq_lidar/scan" /> -->
-		<!-- <remap from="~/cloud" to="/cloud" /> -->
-		<!-- <remap from="~/cloud" to="/cloud" /> -->
 	</node>
 
 	<node name="scan_to_cloud2" pkg="sq_lidar" type="sq_lidar">
 		<param name="fixed_frame" value="base_link" />
 		<remap from="~/scan" to="/sq_lidar/scan" />
 		<remap from="~/cloud" to="/cloud" />
-		<!-- <remap from="~/cloud" to="/cloud" /> -->
 	</node>
 
 	<node pkg="nagayne_pointcloud" name="unflatness_calculator" type="unflatness_calculator"/>
 	
+	<node pkg="nagayne_pointcloud" name="pointcloud_hub" type="pointcloud_hub"/>
+	
 	<!-- <include file="$(find sadayne_pointcloud)/launch/lcl.launch"/> -->
 	<!-- <include file="$(find nagayne_pointcloud)/launch/lcl_.launch"/> -->
-	<include file="$(find nagayne_pointcloud)/launch/nagayne_score.launch"/>
+	<!-- <include file="$(find nagayne_pointcloud)/launch/nagayne_score.launch"/> -->
+<!--lcl-->
+	<node name="ddensity_controll_of_pointcloud"  pkg="nagayne_pointcloud" type="ddensity_controll_of_pointcloud" output="screen">
+		<!-- 	save_num > scan_num	 -->
+		<param name="save_num" type="int" value="100"/>
+		<param name="scan_num" type="int" value="50"/>
+		<!-- 	score = (a*operating_time)^b + (c*unflatness)^d	 -->
+		<param name="a" type="double" value="0.0"/>
+		<param name="b" type="double" value="1.0"/>
+		<param name="c" type="double" value="1.0"/>
+		<param name="d" type="double" value="1.0"/>
+		<remap from="/nagayne_PointCloud2/fusioned" to="/cloud/tf" />
+	</node>
 
 	<!-- <include file="$(find sq_lidar)/launch/human_detection_3dlidar.launch"/> -->
 
