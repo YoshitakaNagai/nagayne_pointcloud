@@ -4,14 +4,8 @@
  * 	author : Yoshitaka Nagai
  */
 
-
-
 #include <ros/ros.h>
-#include <std_msgs/Header.h>
-#include "std_msgs/String.h"
-#include "std_msgs/Float32MultiArray.h"
 #include <sensor_msgs/PointCloud2.h>
-#include <nav_msgs/Odometry.h>
 #include <boost/thread.hpp>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/approximate_voxel_grid.h>
@@ -29,10 +23,6 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-
-#include <vector>
-#include <array>
-#include <algorithm>
 
 
 
@@ -63,6 +53,8 @@ private:
 	ros::Subscriber unflatness_sub_pc;
 	ros::Publisher fusioned_cloud_pub;
 
+	sensor_msgs::PointCloud2 fusioned_pc;
+
 	float ros_time;
 
 	bool intensity_flag;
@@ -78,6 +70,7 @@ FusionPC::FusionPC(void)
 
 	intensity_sub_pc = nh.subscribe("/cloud", 10, &FusionPC::intensity_callback, this);
 	unflatness_sub_pc = nh.subscribe("/nagayne_PointCloud2/unflatness", 10, &FusionPC::unflatness_callback, this);
+	fusioned_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/fusioned", 10);
 }
 
 
@@ -112,8 +105,8 @@ void FusionPC::fusion(void)
 				pc_iuts_->points[i].b = ros_time;
 				pc_iuts_->points[i].curvature = 0;
 			}
-			
-			fusioned_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/fusioned", 10);
+			pcl::toROSMsg(*pc_iuts_, fusioned_pc);
+			fusioned_cloud_pub.publish(fusioned_pc);
 			intensity_flag = false;
 			unflatness_flag = false;
 		}
@@ -127,7 +120,8 @@ void FusionPC::fusion(void)
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "pointcloud_fusion");
-	ros::NodeHandle nh;
-	
+	FusionPC fusion_pointcloud;
+	fusion_pointcloud.fusion();
+
 	return 0;
 }
