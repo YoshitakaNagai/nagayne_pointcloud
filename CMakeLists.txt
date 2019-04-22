@@ -205,16 +205,16 @@ target_link_libraries(unflatness_calculator
 	${PCL_LIBRARIES}
 )
 
-add_executable(density_controll_of_pointcloud src/density_controll_of_pointcloud.cpp)
-add_dependencies(density_controll_of_pointcloud ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(density_controll_of_pointcloud
+add_executable(density_controll_of_pointcloud_v1 src/density_controll_of_pointcloud_v1.cpp)
+add_dependencies(density_controll_of_pointcloud_v1 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(density_controll_of_pointcloud_v1
 	${catkin_LIBRARIES}
 	${OpenCV_LIBRARIES}
 	${PCL_LIBRARIES}
 )
 
-add_executable(ddensity_controll_of_pointcloud src/ddensity_controll_of_pointcloud.cpp)
-target_link_libraries(ddensity_controll_of_pointcloud
+add_executable(density_controll_of_pointcloud_v2 src/density_controll_of_pointcloud_v2.cpp)
+target_link_libraries(density_controll_of_pointcloud_v2
 	${catkin_LIBRARIES}
 	${OpenCV_LIBRARIES}
 	${PCL_LIBRARIES}

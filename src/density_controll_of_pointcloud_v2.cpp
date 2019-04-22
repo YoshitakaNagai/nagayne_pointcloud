@@ -99,6 +99,7 @@ void lcl_callback(nav_msgs::Odometry msg){
 CloudIUTS scorekeeper(CloudIUTS before_scored_pc)
 {
 	size_t pc_size = before_scored_pc.points.size();
+	#pragma omp parallel for
 	for(size_t i=0;i<pc_size;i++){
 		//r = intensity, g = unflatness, b = time, curvature = score;
 		float unflatness_score = pow((float)a*before_scored_pc.points[i].g, (float)b);
@@ -141,6 +142,7 @@ void veteran_pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
 {
 	pcl::fromROSMsg(*msg, *veteran_pc_);
 	veteran_pc_callback_flag = true;
+	std::cout << "density controlled" << std::endl;
 }
 
 
