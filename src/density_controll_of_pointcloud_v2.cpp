@@ -96,41 +96,47 @@ void lcl_callback(nav_msgs::Odometry msg){
     transform_matrix = create_matrix(odom_, 1.0);
 }
 
-CloudIUTS scorekeeper(CloudIUTS before_scored_pc)
+CloudIUTSPtr scorekeeper(CloudIUTSPtr before_scored_pc)
 {
-	size_t pc_size = before_scored_pc.points.size();
+	size_t pc_size = before_scored_pc->points.size();
 	#pragma omp parallel for
 	for(size_t i=0;i<pc_size;i++){
 		//r = intensity, g = unflatness, b = time, curvature = score;
-		float unflatness_score = pow((float)a*before_scored_pc.points[i].g, (float)b);
-		float operating_time = before_scored_pc.header.stamp - before_scored_pc.points[i].b;
+		float unflatness_score = pow((float)a*before_scored_pc->points[i].g, (float)b);
+		float operating_time = before_scored_pc->header.stamp - before_scored_pc->points[i].b;
 		float operating_time_score = pow((float)c*operating_time, (float)d);
-		before_scored_pc.points[i].curvature = unflatness_score - operating_time_score;
+		before_scored_pc->points[i].curvature = unflatness_score - operating_time_score;
 	}
 	return before_scored_pc;
 }
 
-CloudIUTS pc_downsampling(CloudIUTS after_scored_pc){
-	size_t pc_size = after_scored_pc.points.size();
+CloudIUTSPtr pc_downsampling(CloudIUTSPtr after_scored_pc){
+	size_t pc_size = after_scored_pc->points.size();
 	for(size_t i=0;i<pc_size;i++){
-		score.push_back(after_scored_pc.points[i].curvature);
+		score.push_back(after_scored_pc->points[i].curvature);
 	}
 	sort(score.begin(), score.end());
 	float border_score = score.at(extra_size);
 
 	for(size_t i=0;i<pc_size;i++){
+		std::cout << "select delete points" << std::endl;
 		//r = intensity, g = unflatness, b = time, curvature = score;
-		if(after_scored_pc.points[i].curvature < border_score){
-			after_scored_pc.points.erase(after_scored_pc.points.begin() + i);
+		if(after_scored_pc->points[i].curvature < border_score){
+			after_scored_pc->points.erase(after_scored_pc->points.begin() + i);
+			int counter = 0;
+			std::cout << "erase nomber : " << counter << std::endl;
 		}
 	}
 	return after_scored_pc;
 }
 
 void controll_density(){
+	std::cout << "*veteran_pc += *output_save_pc" << std::endl;
 	*veteran_pc_ += *output_save_pc;
-	*veteran_pc_ = scorekeeper(*veteran_pc_);
-	*downsampled_pc_ = pc_downsampling(*veteran_pc_);
+	std::cout << "veteran_pc_ = scorekeeper(veteran_pc_)" << std::endl;
+	veteran_pc_ = scorekeeper(veteran_pc_);
+	std::cout << "downsampled_pc_ = pc_downsampling(veteran_pc_)" << std::endl;
+	downsampled_pc_ = pc_downsampling(veteran_pc_);
 	sensor_msgs::PointCloud2 pc_;
 	pcl::toROSMsg(*downsampled_pc_, pc_);
 	pc_.header.stamp = ros::Time::now();
@@ -142,7 +148,7 @@ void veteran_pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
 {
 	pcl::fromROSMsg(*msg, *veteran_pc_);
 	veteran_pc_callback_flag = true;
-	std::cout << "density controlled" << std::endl;
+	//std::cout << "density controlled" << std::endl;
 }
 
 
