@@ -5,12 +5,14 @@
  */
 
 #include <ros/ros.h>
-#include <pcl/point_cloud.h>
-#include <pcl_ros/point_cloud.h>
 #include <std_msgs/Header.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <nav_msgs/Odometry.h>
+
 #include <boost/thread.hpp>
+
+#include <pcl/point_cloud.h>
+#include <pcl_ros/point_cloud.h>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/approximate_voxel_grid.h>
 
@@ -21,23 +23,40 @@
 #include "Eigen/Dense"
 #include "Eigen/LU"
 
+#include <vector>
+
 #ifdef _OPENMP
 #include <omp.h>
 #endif
 
 
+typedef pcl::PointXYZINormal PointINormal;
+typedef pcl::PointCloud<PointINormal> CloudINormal;
+typedef pcl::PointCloud<PointINormal>::Ptr CloudINormalPtr;
 
-typedef pcl::PointXYZRGBNormal PointIUTS;
+typedef pcl::PointXYZHSV PointIUT;
+typedef pcl::PointCloud<PointIUT> CloudIUT;
+typedef pcl::PointCloud<PointIUT>::Ptr CloudIUTPtr;
+CloudIUTPtr pc_iut_ (new CloudIUT);
+CloudIUTPtr output_save_pc (new CloudIUT);
+CloudIUTPtr single_pc_(new CloudIUT);
+CloudIUTPtr save_pc_ (new CloudIUT);
+CloudIUTPtr output_pc_after (new CloudIUT);
+CloudIUTPtr output_pc (new CloudIUT);
+CloudIUTPtr old_pc_ (new CloudIUT);
+
+class PointXYZIUTS : public pcl::PointXYZHSV
+{
+public:
+	float score;
+};
+
+typedef PointXYZIUTS PointIUTS;
 typedef pcl::PointCloud<PointIUTS> CloudIUTS;
 typedef pcl::PointCloud<PointIUTS>::Ptr CloudIUTSPtr;
 
-CloudIUTSPtr single_pc_(new CloudIUTS);
-CloudIUTSPtr save_pc_ (new CloudIUTS);
-CloudIUTSPtr output_save_pc (new CloudIUTS);
-CloudIUTSPtr output_pc_after (new CloudIUTS);
-CloudIUTSPtr output_pc (new CloudIUTS);
-CloudIUTSPtr old_pc_ (new CloudIUTS);
-CloudIUTSPtr veteran_pc_ (new CloudIUTS);
+
+
 CloudIUTSPtr downsampled_pc_ (new CloudIUTS);
 
 nav_msgs::Odometry odom_;
@@ -52,8 +71,8 @@ ros::Publisher DCP_pub;
 Eigen::Matrix4f transform_matrix;
 Eigen::Matrix4f inverse_transform_matrix;
 
+std::vector<float> score_list;
 
-std::vector<float> score;
 
 double a, b, c, d;
 
@@ -96,49 +115,99 @@ void lcl_callback(nav_msgs::Odometry msg){
     transform_matrix = create_matrix(odom_, 1.0);
 }
 
+
+//std::map<CloudIUTPtr, float> scorekeeper(CloudIUTPtr before_scored_pc)
 CloudIUTSPtr scorekeeper(CloudIUTSPtr before_scored_pc)
 {
-	size_t pc_size = before_scored_pc->points.size();
-	#pragma omp parallel for
-	for(size_t i=0;i<pc_size;i++){
-		//r = intensity, g = unflatness, b = time, curvature = score;
-		float unflatness_score = pow((float)a*before_scored_pc->points[i].g, (float)b);
-		float operating_time = before_scored_pc->header.stamp - before_scored_pc->points[i].b;
-		float operating_time_score = pow((float)c*operating_time, (float)d);
-		before_scored_pc->points[i].curvature = unflatness_score - operating_time_score;
+	size_t i = 0;
+	//#pragma omp parallel for	
+	for(auto& pt : before_scored_pc->points){
+	//for(size_t i=0;i<pc_size;i++){
+		float unflatness_score = pow((float)a*pt.s, (float)b);
+		//float unflatness_score = pow((float)a*before_scored_pc->points[i].s, (float)b);
+		float operating_time = ros::Time::now().toSec() - pt.v;
+		//float operating_time = ros::Time::now().toSec() - before_scored_pc->points[i].v;
+		float operating_time_score = - pow((float)c*operating_time, (float)d);
+		float score = unflatness_score + operating_time_score;
+		std::cout << "score = " << score << std::endl;
+		pt.score = unflatness_score + operating_time_score;
+		//score_map.insert(std::make_pair(pt, score));
+		score_list.push_back(score);
+		if(i > extra_size){
+			sort(score_list.begin(), score_list.end());
+			score_list.pop_back();
+		}
+		i++;
 	}
+	
 	return before_scored_pc;
 }
 
-CloudIUTSPtr pc_downsampling(CloudIUTSPtr after_scored_pc){
-	size_t pc_size = after_scored_pc->points.size();
-	for(size_t i=0;i<pc_size;i++){
-		score.push_back(after_scored_pc->points[i].curvature);
-	}
-	sort(score.begin(), score.end());
-	float border_score = score.at(extra_size);
 
-	for(size_t i=0;i<pc_size;i++){
-		std::cout << "select delete points" << std::endl;
-		//r = intensity, g = unflatness, b = time, curvature = score;
-		if(after_scored_pc->points[i].curvature < border_score){
-			after_scored_pc->points.erase(after_scored_pc->points.begin() + i);
-			int counter = 0;
-			std::cout << "erase nomber : " << counter << std::endl;
+//CloudIUTPtr pc_downsampling(CloudIUTPtr after_scored_pc, std::vector<size_t> sorted_score_id){
+CloudIUTSPtr pc_downsampling(CloudIUTSPtr after_scored_pc){
+	//size_t pc_size = after_scored_pc->points.size();
+	float border_score = score_list.back();
+	size_t i = 0;
+	
+	for(auto& pt : after_scored_pc->points){
+		if(pt.score <= border_score){
+			after_scored_pc->points.erase(after_scored_pc->points.begin() + i -1);
+		}
+		i++;
+		if(i > extra_size){
+			break;
 		}
 	}
+	
 	return after_scored_pc;
 }
 
+CloudIUTSPtr pc_evolution(CloudIUTPtr raw_pc_){
+	CloudIUTSPtr evolution_pc_ (new CloudIUTS);
+	size_t pc_size = raw_pc_->points.size();
+	for(size_t i=0;i<pc_size;i++){
+		std::cout << "evolutioning" << std::endl;
+		evolution_pc_->points[i].x += raw_pc_->points[i].x;
+		evolution_pc_->points[i].y += raw_pc_->points[i].y;
+		evolution_pc_->points[i].z += raw_pc_->points[i].z;
+		evolution_pc_->points[i].h += raw_pc_->points[i].h;
+		evolution_pc_->points[i].s += raw_pc_->points[i].s;
+		evolution_pc_->points[i].v += raw_pc_->points[i].v;
+		evolution_pc_->points[i].score += 0;
+	}
+	return evolution_pc_;
+}
+
+CloudIUTPtr pc_degeneration(CloudIUTSPtr evo_pc){
+	CloudIUTPtr degeneration_pc (new CloudIUT);
+	size_t i = 0;
+	for(auto& pt: evo_pc->points){
+		std::cout << "degenerationning" << std::endl;
+		degeneration_pc->points[i].x += pt.x;
+		degeneration_pc->points[i].y += pt.y;
+		degeneration_pc->points[i].z += pt.z;
+		degeneration_pc->points[i].h += pt.h;
+		degeneration_pc->points[i].s += pt.s;
+		degeneration_pc->points[i].v += pt.score;
+		i++;
+	}
+	return degeneration_pc;
+}
+
 void controll_density(){
-	std::cout << "*veteran_pc += *output_save_pc" << std::endl;
+	CloudIUTPtr veteran_pc_ (new CloudIUT);
+	CloudIUTSPtr evolutioned_pc_ (new CloudIUTS);
+	CloudIUTPtr degenerationed_pc_ (new CloudIUT);
+
 	*veteran_pc_ += *output_save_pc;
-	std::cout << "veteran_pc_ = scorekeeper(veteran_pc_)" << std::endl;
-	veteran_pc_ = scorekeeper(veteran_pc_);
-	std::cout << "downsampled_pc_ = pc_downsampling(veteran_pc_)" << std::endl;
-	downsampled_pc_ = pc_downsampling(veteran_pc_);
+	evolutioned_pc_ = pc_evolution(veteran_pc_);
+	evolutioned_pc_ = scorekeeper(evolutioned_pc_);
+	evolutioned_pc_ = pc_downsampling(evolutioned_pc_);
+	degenerationed_pc_ = pc_degeneration(evolutioned_pc_);
+	
 	sensor_msgs::PointCloud2 pc_;
-	pcl::toROSMsg(*downsampled_pc_, pc_);
+	pcl::toROSMsg(*degenerationed_pc_, pc_);
 	pc_.header.stamp = ros::Time::now();
 	//pc_.header.frame_id = msg->header.frame_id;
 	DCP_pub.publish(pc_);
@@ -146,7 +215,8 @@ void controll_density(){
 
 void veteran_pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
 {
-	pcl::fromROSMsg(*msg, *veteran_pc_);
+	//pcl::fromROSMsg(*msg, *pc_iut_);
+	pcl::fromROSMsg(*msg, *pc_iut_);
 	veteran_pc_callback_flag = true;
 	//std::cout << "density controlled" << std::endl;
 }
@@ -163,7 +233,6 @@ void pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
                 pow(single_pc_->points[i].z, 2));
         if(distance < 50){	//調整可
             //if(single_pc_->points[i].z <= z_threshold){
-            PointIUTS temp;
             output_pc_after->points.push_back(output_pc->points[i]);
         }
     }
@@ -194,8 +263,9 @@ void pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
 		pc_.header.frame_id = msg->header.frame_id;
 		// pc_.header.frame_id = "/odom3d";	//変更
 		pub.publish(pc_);
-		count_++;
 	}
+
+		count_++;
 }
 
 int main(int argc, char** argv)
@@ -210,12 +280,12 @@ int main(int argc, char** argv)
 	nh.getParam("c", scan_num);
 	nh.getParam("d", scan_num);
 
-    ros::Subscriber sub_pc = n.subscribe("/nagayne_PointCloud2/fusioned", 30, pc_callback);
-    ros::Subscriber sub_lcl = n.subscribe("/odom", 30, lcl_callback);
-	ros::Subscriber sub_veteran_pc = n.subscribe("/nagayne_PointCloud2/density_controlled", 30, veteran_pc_callback);
+    ros::Subscriber sub_pc = n.subscribe("/nagayne_PointCloud2/fusioned", 10, pc_callback);
+    ros::Subscriber sub_lcl = n.subscribe("/odom", 10, lcl_callback);
+	ros::Subscriber sub_veteran_pc = n.subscribe("/nagayne_PointCloud2/density_controlled", 10, veteran_pc_callback);
 
-	pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 30);
-	DCP_pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 30);
+	pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 10);
+	DCP_pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 10);
 
     nav_msgs::Odometry init_odom;
     init_odom.header.frame_id = "/map";
@@ -230,11 +300,13 @@ int main(int argc, char** argv)
 
     odom_ = init_odom;
 
-	std::cout<<"start"<<std::endl;
-	
+
+
 	ros::Rate r(100);
 	while(ros::ok()){	
 		if(save_flag && pc_callback_flag && veteran_pc_callback_flag){
+			
+			std::cout<<"start"<<std::endl;
 			controll_density();
 			pc_callback_flag = false;
 			veteran_pc_callback_flag = false;

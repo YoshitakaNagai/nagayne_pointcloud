@@ -29,12 +29,12 @@
 #include <map>
 
 
-namespace pcl::PointXYZI::points::A = pcl::PointXYZI::points::X
 
-class Nagayne : public pcl::PointXYZI
+class PointXYZIUTS : public pcl::PointXYZI
 {
 public:
-	
+	float unflatness;
+	float time;
 }
 
 #endif

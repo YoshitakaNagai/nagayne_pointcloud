@@ -30,7 +30,7 @@
 		<param name="save_num" type="int" value="100"/>
 		<param name="scan_num" type="int" value="50"/>
 		<!-- 	score = (a*operating_time)^b + (c*unflatness)^d	 -->
-		<param name="a" type="double" value="0.0"/>
+		<param name="a" type="double" value="10.0"/>
 		<param name="b" type="double" value="1.0"/>
 		<param name="c" type="double" value="1.0"/>
 		<param name="d" type="double" value="1.0"/>
