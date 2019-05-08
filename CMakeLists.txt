@@ -220,6 +220,12 @@ target_link_libraries(density_controll_of_pointcloud_v2
 	${PCL_LIBRARIES}
 )
 
+add_executable(density_controll_of_pointcloud_v3 src/density_controll_of_pointcloud_v3.cpp)
+target_link_libraries(density_controll_of_pointcloud_v3
+	${catkin_LIBRARIES}
+	${OpenCV_LIBRARIES}
+	${PCL_LIBRARIES}
+)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

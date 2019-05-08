@@ -25,10 +25,10 @@
 	<!-- <include file="$(find nagayne_pointcloud)/launch/lcl_.launch"/> -->
 	<!-- <include file="$(find nagayne_pointcloud)/launch/nagayne_score.launch"/> -->
 <!--lcl-->
-	<node name="density_controll_of_pointcloud_v2"  pkg="nagayne_pointcloud" type="density_controll_of_pointcloud_v2" output="screen">
+	<node name="density_controll_of_pointcloud_v3"  pkg="nagayne_pointcloud" type="density_controll_of_pointcloud_v3" output="screen">
 		<!-- 	save_num > scan_num	 -->
-		<param name="save_num" type="int" value="100"/>
-		<param name="scan_num" type="int" value="50"/>
+		<param name="save_num" type="int" value="5"/>
+		<param name="scan_num" type="int" value="5"/>
 		<!-- 	score = (a*operating_time)^b + (c*unflatness)^d	 -->
 		<param name="a" type="double" value="10.0"/>
 		<param name="b" type="double" value="1.0"/>
