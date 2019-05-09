@@ -37,6 +37,9 @@
 		<remap from="/nagayne_PointCloud2/fusioned" to="/cloud/tf" />
 	</node>
 
+	<node name="rm_node20" pkg="velodyne_height_map" type="rm_node20" >
+		<remap from="/perfect_velodyne/normal" to="/nagayne_PointCloud2/density_controlled" />
+	</node>
 	<!-- <include file="$(find sq_lidar)/launch/human_detection_3dlidar.launch"/> -->
 
 	<node pkg="rosbag" name="player" type="play" args="--clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/stay.bag -r 1"/>

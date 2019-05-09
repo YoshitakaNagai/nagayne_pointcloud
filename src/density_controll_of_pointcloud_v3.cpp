@@ -42,17 +42,6 @@ CloudIUTPtr output_pc (new CloudIUT);
 CloudIUTPtr old_pc_ (new CloudIUT);
 CloudIUTPtr veteran_pc_ (new CloudIUT);
 
-// class PointXYZIUTS : public pcl::PointXYZHSV
-// {
-// public:
-// 	float score;
-// };
-//
-// typedef PointXYZIUTS PointIUTS;
-// typedef pcl::PointCloud<PointIUTS> CloudIUTS;
-// typedef pcl::PointCloud<PointIUTS>::Ptr CloudIUTSPtr;
-//CloudIUTSPtr downsampled_pc_ (new CloudIUTS);
-
 nav_msgs::Odometry odom_;
 nav_msgs::Odometry init_odom_;
 nav_msgs::Odometry sq_time;
@@ -64,13 +53,8 @@ Eigen::Matrix4f transform_matrix;
 Eigen::Matrix4f inverse_transform_matrix;
 
 double a, b, c, d;
-double KP = 1;
-double KI = 0;
-double KD = 0;
 
 size_t extra_size;
-size_t target_size;
-size_t histogram_save_num;
 
 const int resolution = 1000;
 int histogram[resolution];
@@ -113,44 +97,35 @@ void lcl_callback(nav_msgs::Odometry msg){
     transform_matrix = create_matrix(odom_, 1.0);
 }
 
-/*
-void calc_score_histogram(int score){
-	histogram[score] += 1;
-}
 
-
-int calc_border_score(){
-	int histogram_count = 0;
-	int border = 0;
-	while(histogram_count < extra_size){
-		histogram_count += histogram[border];
-		border++;
-	}
-	return border;
-}
-*/
-
-
-void pt_lifespan_keeper(CloudIUTPtr vpc){
-	float dt = ros::Time::now().toSec() - tmp_time;
+CloudIUTPtr pt_lifespan_keeper(CloudIUTPtr vpc){
+	float beginning_time = ros::Time::now().toSec();
+	float dt = beginning_time - tmp_time;
 	for(auto& pt : vpc->points){
 		pt.v -= dt;
+		if(dt > 0){
+			std::cout << "dt = " << dt << std::endl;
+		}
+
 	}
+	tmp_time = beginning_time;
+	std::cout << "tmp_time : " << std::endl;
+	return vpc;
 }
 
 
 void scorekeeper(CloudIUTPtr before_scored_pc)
 {
 	float now_time = ros::Time::now().toSec();
-	//float operating_time = now_time - begin_time;
 	//#pragma omp parallel for	
 	for(auto& pt : before_scored_pc->points){
-		float unflatness_score = resolution*pt.s/2;
+		//float unflatness_score = resolution*pt.s/2;
+		float unflatness_score = pt.s/2;
 		//float time_score = resolution*(pt.v - begin_time)/operating_time;
 		//float score = (unflatness_score + time_score)/2;
 		float score = (float)a*unflatness_score;
-		//calc_score_histogram(score);
 		pt.v = score;
+		//std::cout << "scoring" << std::endl;
 	}
 }
 
@@ -162,11 +137,6 @@ CloudIUTPtr pc_downsampling(CloudIUTPtr after_scored_pc){
 	pass.setFilterFieldName ("v");
 	pass.setFilterLimits (0, 1.0);
 	pass.filter(*pc_filterd);
-	/*
-	for(auto& h : histogram){
-		h = 0;
-	}
-	*/
 	return pc_filterd;
 }
 
@@ -175,7 +145,7 @@ void controll_density(){
 	
 	scorekeeper(output_save_pc);
 	*veteran_pc_ += *output_save_pc;
-	pt_lifespan_keeper(veteran_pc_);
+	veteran_pc_ = pt_lifespan_keeper(veteran_pc_);
 	downsampled_pc_ = pc_downsampling(veteran_pc_);
 	
 	sensor_msgs::PointCloud2 pc_;
@@ -189,7 +159,6 @@ void veteran_pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
 {
 	pcl::fromROSMsg(*msg, *veteran_pc_);
 	veteran_pc_callback_flag = true;
-	//std::cout << "density controlled" << std::endl;
 }
 
 
@@ -237,7 +206,8 @@ int main(int argc, char** argv)
 
     ros::Subscriber sub_pc = n.subscribe("/nagayne_PointCloud2/fusioned", 10, fresh_pc_callback);
     ros::Subscriber sub_lcl = n.subscribe("/odom", 10, lcl_callback);
-	ros::Subscriber sub_veteran_pc = n.subscribe("/nagayne_PointCloud2/density_controlled", 10, veteran_pc_callback);
+	ros::Subscriber sub_veteran_pc = n.subscribe("/rm_ground", 10, veteran_pc_callback);
+	//ros::Subscriber sub_veteran_pc = n.subscribe("/nagayne_PointCloud2/density_controlled", 10, veteran_pc_callback);
 
 	pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 10);
 	DCP_pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 10);
@@ -255,16 +225,11 @@ int main(int argc, char** argv)
 
     odom_ = init_odom;
 
-	/*
-	for(auto& h : histogram){
-		h = 0;
-	}
-	*/
-
+	std::cout<<"start"<<std::endl;
+	
 	ros::Rate r(100);
 	while(ros::ok()){	
 		if(fresh_pc_callback_flag && veteran_pc_callback_flag){
-			std::cout<<"start"<<std::endl;
 			controll_density();
 			fresh_pc_callback_flag = false;
 			veteran_pc_callback_flag = false;
