@@ -34,13 +34,8 @@ typedef pcl::PointXYZHSV PointIUT;
 typedef pcl::PointCloud<PointIUT> CloudIUT;
 typedef pcl::PointCloud<PointIUT>::Ptr CloudIUTPtr;
 CloudIUTPtr pc_iut_ (new CloudIUT);
-CloudIUTPtr output_save_pc (new CloudIUT);
-CloudIUTPtr single_pc_(new CloudIUT);
-CloudIUTPtr save_pc_ (new CloudIUT);
-CloudIUTPtr output_pc_after (new CloudIUT);
-CloudIUTPtr output_pc (new CloudIUT);
-CloudIUTPtr old_pc_ (new CloudIUT);
 CloudIUTPtr veteran_pc_ (new CloudIUT);
+CloudIUTPtr output_save_pc_ (new CloudIUT);
 
 nav_msgs::Odometry odom_;
 nav_msgs::Odometry init_odom_;
@@ -100,11 +95,12 @@ void lcl_callback(nav_msgs::Odometry msg){
 
 CloudIUTPtr pt_lifespan_keeper(CloudIUTPtr vpc){
 	float beginning_time = ros::Time::now().toSec();
-	float dt = beginning_time - tmp_time;
+	//float dt = beginning_time - tmp_time;
+	float dt = 0.01;
 	for(auto& pt : vpc->points){
 		pt.v -= dt;
-		if(dt > 0){
-			std::cout << "dt = " << dt << std::endl;
+		if(pt.v < 0){
+			std::cout << "pt.v = " << pt.v << std::endl;
 		}
 
 	}
@@ -114,11 +110,11 @@ CloudIUTPtr pt_lifespan_keeper(CloudIUTPtr vpc){
 }
 
 
-void scorekeeper(CloudIUTPtr before_scored_pc)
+CloudIUTPtr scorekeeper(CloudIUTPtr before_scored_pc_)
 {
-	float now_time = ros::Time::now().toSec();
+	//float now_time = ros::Time::now().toSec();
 	//#pragma omp parallel for	
-	for(auto& pt : before_scored_pc->points){
+	for(auto& pt : before_scored_pc_->points){
 		//float unflatness_score = resolution*pt.s/2;
 		float unflatness_score = pt.s/2;
 		//float time_score = resolution*(pt.v - begin_time)/operating_time;
@@ -127,6 +123,8 @@ void scorekeeper(CloudIUTPtr before_scored_pc)
 		pt.v = score;
 		//std::cout << "scoring" << std::endl;
 	}
+
+	return before_scored_pc_;
 }
 
 
@@ -135,41 +133,46 @@ CloudIUTPtr pc_downsampling(CloudIUTPtr after_scored_pc){
 	pcl::PassThrough<PointIUT> pass;
 	pass.setInputCloud(after_scored_pc);
 	pass.setFilterFieldName ("v");
-	pass.setFilterLimits (0, 1.0);
+	pass.setFilterLimits (0, a);
 	pass.filter(*pc_filterd);
 	return pc_filterd;
 }
 
-void controll_density(){
-	CloudIUTPtr downsampled_pc_ (new CloudIUT);
+void controll_density(CloudIUTPtr fresh_pc_){
+	//CloudIUTPtr downsampled_pc_ (new CloudIUT);
 	
-	scorekeeper(output_save_pc);
-	*veteran_pc_ += *output_save_pc;
+	fresh_pc_ = scorekeeper(fresh_pc_);
+	*veteran_pc_ += *fresh_pc_;
 	veteran_pc_ = pt_lifespan_keeper(veteran_pc_);
-	downsampled_pc_ = pc_downsampling(veteran_pc_);
+	veteran_pc_ = pc_downsampling(veteran_pc_);
 	
 	sensor_msgs::PointCloud2 pc_;
-	pcl::toROSMsg(*downsampled_pc_, pc_);
+	//pcl::toROSMsg(*downsampled_pc_, pc_);
+	pcl::toROSMsg(*veteran_pc_, pc_);
 	pc_.header.stamp = ros::Time::now();
 	pc_.header.frame_id = veteran_pc_->header.frame_id;
 	DCP_pub.publish(pc_);
 }
 
+/*
 void veteran_pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
 {
 	pcl::fromROSMsg(*msg, *veteran_pc_);
 	veteran_pc_callback_flag = true;
 }
-
+*/
 
 
 void fresh_pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
 {
-    pcl::fromROSMsg(*msg, *single_pc_);
-    if(!first_flag){
-		pub.publish(*msg);
-		begin_time = single_pc_->points[0].v;
-		tmp_time = ros::Time::now().toSec();
+	CloudIUTPtr single_pc_(new CloudIUT);
+	CloudIUTPtr output_pc_after (new CloudIUT);
+	CloudIUTPtr output_pc (new CloudIUT);
+
+	pcl::fromROSMsg(*msg, *single_pc_);
+    
+	if(!first_flag){
+		*veteran_pc_ = *single_pc_;		
 		first_flag = true;
 	}
 	
@@ -185,10 +188,13 @@ void fresh_pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
     }
 
     Eigen::Matrix4f inverse_transform_matrix = transform_matrix.inverse();
-    pcl::transformPointCloud(*output_pc_after, *output_save_pc, inverse_transform_matrix);
+    pcl::transformPointCloud(*output_pc_after, *output_save_pc_, inverse_transform_matrix);
 
-	extra_size = output_save_pc->points.size();
-	fresh_pc_callback_flag = true;
+	controll_density(output_save_pc_);
+
+	extra_size = output_save_pc_->points.size();
+	//fresh_pc_callback_flag = true;
+
 }
 
 
@@ -206,10 +212,10 @@ int main(int argc, char** argv)
 
     ros::Subscriber sub_pc = n.subscribe("/nagayne_PointCloud2/fusioned", 10, fresh_pc_callback);
     ros::Subscriber sub_lcl = n.subscribe("/odom", 10, lcl_callback);
-	ros::Subscriber sub_veteran_pc = n.subscribe("/rm_ground", 10, veteran_pc_callback);
+	//ros::Subscriber sub_veteran_pc = n.subscribe("/rm_ground", 10, veteran_pc_callback);
 	//ros::Subscriber sub_veteran_pc = n.subscribe("/nagayne_PointCloud2/density_controlled", 10, veteran_pc_callback);
 
-	pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 10);
+	//pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 10);
 	DCP_pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 10);
 
     nav_msgs::Odometry init_odom;
@@ -226,10 +232,11 @@ int main(int argc, char** argv)
     odom_ = init_odom;
 
 	std::cout<<"start"<<std::endl;
-	
+	/*
 	ros::Rate r(100);
 	while(ros::ok()){	
-		if(fresh_pc_callback_flag && veteran_pc_callback_flag){
+		//if(fresh_pc_callback_flag && veteran_pc_callback_flag){
+		if(fresh_pc_callback_flag){
 			controll_density();
 			fresh_pc_callback_flag = false;
 			veteran_pc_callback_flag = false;
@@ -237,4 +244,7 @@ int main(int argc, char** argv)
 		r.sleep();
 		ros::spinOnce();
 	}
+	*/
+	ros::spin();
+
 }
