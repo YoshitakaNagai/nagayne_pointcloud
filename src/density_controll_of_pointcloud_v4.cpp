@@ -33,83 +33,200 @@
 typedef pcl::PointXYZHSV PointIUT;
 typedef pcl::PointCloud<PointIUT> CloudIUT;
 typedef pcl::PointCloud<PointIUT>::Ptr CloudIUTPtr;
-CloudIUTPtr pc_iut_ (new CloudIUT);
 CloudIUTPtr veteran_pc_ (new CloudIUT);
-CloudIUTPtr output_save_pc_ (new CloudIUT);
+CloudIUTPtr fresh_pc_ (new CloudIUT);
+CloudIUTPtr transformed_pc_ (new CloudIUT);
 
-nav_msgs::Odometry odom_;
-nav_msgs::Odometry init_odom_;
-nav_msgs::Odometry sq_time;
 
-ros::Publisher pub;
-ros::Publisher DCP_pub;
+class Nagayne
+{
+	public:
+		Nagayne();
 
-Eigen::Matrix4f transform_matrix;
-Eigen::Matrix4f inverse_transform_matrix;
+		void lcl_callback(const nav_msgs::OdometryConstPtr&);
+		void fresh_pc_callback(const sensor_msgs::PointCloud2ConstPtr&);
+		
+		void controll_density(void);
 
-double a, b, c, d;
+		CloudIUTPtr pt_lifespan_keeper(CloudIUTPtr);
+		CloudIUTPtr scorekeeper(CloudIUTPtr);
+		CloudIUTPtr pc_downsampling(CloudIUTPtr);
 
-size_t extra_size;
+	private:
+		int save_num;
+		int scan_num;
 
-const int resolution = 1000;
-int histogram[resolution];
-int save_num;
-int scan_num;
+		bool fresh_pc_callback_flag = false;
+		bool lcl_callback_flag = false;
+		bool first_flag = false;
 
-bool init_lcl_flag = false;
-bool save_flag = false;
-bool fresh_pc_callback_flag = false;
-bool veteran_pc_callback_flag = false;
-bool first_flag = false;
+		float begin_time;
+		float tmp_time;
+		float Hz = 100;
+		float odom_x, odom_y, odom_z;
+		float odom_qx, odom_qy, odom_qz, odom_qw;
+		float tmp_odom_x = 0.0;
+		float tmp_odom_y = 0.0;
+		float tmp_odom_z = 0.0;
+		float tmp_odom_qx = 0.0;
+		float tmp_odom_qy = 0.0;
+		float tmp_odom_qz = 0.0;
+		float tmp_odom_qw = 0.0;
+		float odom_dx, odom_dy, odom_dz;
+		float odom_dqx, odom_dqy, odom_dqz, odom_dqw;
 
-float z_threshold = 30.0;
-float begin_time;
-float tmp_time;
+		double dR, dP, dY;
+		double a, b, c, d;
+		
+				
+		ros::Subscriber sub_pc;
+		ros::Subscriber sub_lcl;
+		
+		ros::Publisher DCP_pub;
+		
+		sensor_msgs::PointCloud2 pc_;
+		nav_msgs::Odometry init_odom;
+		nav_msgs::Odometry odom;
 
-Eigen::Matrix4f create_matrix(nav_msgs::Odometry odom_now, float reflect){
+		Eigen::Affine3f transform;
+};
 
-    double roll_now, pitch_now, yaw_now;
 
-    tf::Quaternion q_now(odom_now.pose.pose.orientation.x, odom_now.pose.pose.orientation.y, odom_now.pose.pose.orientation.z, odom_now.pose.pose.orientation.w);
-    tf::Matrix3x3(q_now).getRPY(roll_now, pitch_now, yaw_now);
-
-    Eigen::Translation3f init_translation(reflect*odom_now.pose.pose.position.x, reflect*odom_now.pose.pose.position.y, reflect*odom_now.pose.pose.position.z);
-    Eigen::AngleAxisf init_rotation_x(reflect*roll_now, Eigen::Vector3f::UnitX());
-    Eigen::AngleAxisf init_rotation_y(reflect*pitch_now, Eigen::Vector3f::UnitY());
-    Eigen::AngleAxisf init_rotation_z(reflect*yaw_now, Eigen::Vector3f::UnitZ());
-
-    Eigen::Matrix4f init_guess = (init_translation * init_rotation_z * init_rotation_y * init_rotation_x).matrix();
-
-    return init_guess;
+int main(int argc, char** argv)
+{
+    ros::init(argc, argv, "density_controll_of_pointcloud_v4");
+	
+	Nagayne nagayne_pointcloud;
+	nagayne_pointcloud.controll_density();
+	
+	return 0;
 }
 
-void lcl_callback(nav_msgs::Odometry msg){
-    if(init_lcl_flag){
-        init_odom_ = msg;
-        init_lcl_flag = false;
-    }
-    odom_ = msg;
-    transform_matrix = create_matrix(odom_, 1.0);
+
+Nagayne::Nagayne(void)
+{
+	ros::NodeHandle n;
+	ros::NodeHandle nh("~");
+
+	nh.getParam("save_num", save_num);
+	nh.getParam("scan_num", scan_num);
+	nh.getParam("a", a);
+	nh.getParam("b", b);
+	nh.getParam("c", c);
+	nh.getParam("d", d);
+
+	transform = Eigen::Affine3f::Identity();
+
+	sub_pc = n.subscribe("/nagayne_PointCloud2/fusioned", 10, &Nagayne::fresh_pc_callback, this);
+    sub_lcl = n.subscribe("/odom", 10, &Nagayne::lcl_callback, this);
+
+	DCP_pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 10);
 }
 
 
-CloudIUTPtr pt_lifespan_keeper(CloudIUTPtr vpc){
-	float beginning_time = ros::Time::now().toSec();
-	float dt = 0.01;
+void Nagayne::controll_density(void){
+	ros::Rate r(Hz);
+	while(ros::ok()){
+		if(fresh_pc_callback_flag && lcl_callback_flag){
+			std::cout << "flags : true" << std::endl;
+			
+			pcl::transformPointCloud(*veteran_pc_, *veteran_pc_, transform);
+			fresh_pc_ = scorekeeper(fresh_pc_);
+			//pcl::transformPointCloud(*veteran_pc_, *transformed_pc_, transform);
+			//veteran_pc_ = transformed_pc_;
+			std::cout << "before_veteran_pc_size : " << veteran_pc_->points.size() << std::endl;
+			*veteran_pc_ += *fresh_pc_;
+
+			std::cout << "veteran_pc_size : " << veteran_pc_->points.size() << std::endl;
+			veteran_pc_ = pt_lifespan_keeper(veteran_pc_);
+			veteran_pc_ = pc_downsampling(veteran_pc_);
+			
+			std::cout << "after_pc_size : " << veteran_pc_->points.size() << std::endl;
+			
+			pcl::toROSMsg(*veteran_pc_, pc_);
+			pc_.header.stamp = ros::Time::now();
+			pc_.header.frame_id = veteran_pc_->header.frame_id;
+			DCP_pub.publish(pc_);
+			
+			fresh_pc_callback_flag = false;
+			lcl_callback_flag = false;
+		}
+		r.sleep();
+		ros::spinOnce();
+	}
+}
+
+
+void Nagayne::fresh_pc_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
+{
+	pcl::fromROSMsg(*msg, *fresh_pc_);
+    
+	if(!first_flag){
+		*veteran_pc_ = *fresh_pc_;
+		first_flag = true;
+	}
+	
+	fresh_pc_callback_flag = true;
+	//std::cout << "fresh_pc_callback_flag : " << fresh_pc_callback_flag << std::endl;
+}
+
+
+void Nagayne::lcl_callback(const nav_msgs::OdometryConstPtr &msg)
+{
+	odom = *msg;
+
+	odom_x = odom.pose.pose.position.x;
+	odom_y = odom.pose.pose.position.y;
+	odom_z = odom.pose.pose.position.z;
+	odom_dx = odom_x - tmp_odom_x;
+	odom_dy = odom_y - tmp_odom_y;
+	odom_dz = odom_z - tmp_odom_z;
+	transform.translation() << odom_dx, odom_dy, odom_dz;
+
+	odom_qx = odom.pose.pose.orientation.x;
+	odom_qy = odom.pose.pose.orientation.y;
+	odom_qz = odom.pose.pose.orientation.z;
+	odom_qw = odom.pose.pose.orientation.w;
+	odom_dqx = odom_qx - tmp_odom_qx;
+	odom_dqy = odom_qy - tmp_odom_qy;
+	odom_dqz = odom_qz - tmp_odom_qz;
+	odom_dqw = odom_qw - tmp_odom_qw;
+	tf::Quaternion tf_quaternion(odom_dqx, odom_dqy, odom_dqz, odom_dqw);
+	tf::Matrix3x3 tf_matrix(tf_quaternion);
+	tf_matrix.getRPY(dR, dP, dY);
+	transform.rotate(Eigen::AngleAxisf((float)dR, Eigen::Vector3f::UnitX()));
+	transform.rotate(Eigen::AngleAxisf((float)dP, Eigen::Vector3f::UnitY()));
+	transform.rotate(Eigen::AngleAxisf((float)dY, Eigen::Vector3f::UnitZ()));
+
+	tmp_odom_x = odom_x;
+	tmp_odom_y = odom_y;
+	tmp_odom_z = odom_z;
+
+	tmp_odom_qx = odom_qx;
+	tmp_odom_qy = odom_qy;
+	tmp_odom_qz = odom_qz;
+	tmp_odom_qw = odom_qw;
+
+	lcl_callback_flag = true;
+	//std::cout << "lcl_callback_flag : " << lcl_callback_flag << std::endl;
+}
+
+
+CloudIUTPtr Nagayne::pt_lifespan_keeper(CloudIUTPtr vpc)
+{
+	float dt = 1/Hz;
 	for(auto& pt : vpc->points){
 		pt.v -= dt;
 	}
-	tmp_time = beginning_time;
-	std::cout << "tmp_time : " << std::endl;
 	return vpc;
 }
 
 
-CloudIUTPtr scorekeeper(CloudIUTPtr before_scored_pc_)
+CloudIUTPtr Nagayne::scorekeeper(CloudIUTPtr before_scored_pc_)
 {
 	for(auto& pt : before_scored_pc_->points){
 		float unflatness_score = pt.s/2;
-		float score = (float)a*unflatness_score + c;
+		float score = (float)a*unflatness_score + (float)c;
 		pt.v = score;
 		//pt.v = (float)b*sqrt(pow(pt.x,2) + pow(pt.y,2) + pow(pt.z,2))/30.0 + c;
 	}
@@ -118,93 +235,15 @@ CloudIUTPtr scorekeeper(CloudIUTPtr before_scored_pc_)
 }
 
 
-CloudIUTPtr pc_downsampling(CloudIUTPtr after_scored_pc){
+CloudIUTPtr Nagayne::pc_downsampling(CloudIUTPtr after_scored_pc)
+{
 	CloudIUTPtr pc_filterd (new CloudIUT);
 	pcl::PassThrough<PointIUT> pass;
 	pass.setInputCloud(after_scored_pc);
 	pass.setFilterFieldName ("v");
-	pass.setFilterLimits (0, a + c);
+	pass.setFilterLimits (0, (float)a + (float)c);
 	//pass.setFilterLimits (0, b + c);
 	pass.filter(*pc_filterd);
+
 	return pc_filterd;
-}
-
-void controll_density(CloudIUTPtr fresh_pc_){
-	fresh_pc_ = scorekeeper(fresh_pc_);
-	*veteran_pc_ += *fresh_pc_;
-	veteran_pc_ = pt_lifespan_keeper(veteran_pc_);
-	veteran_pc_ = pc_downsampling(veteran_pc_);
-	
-	sensor_msgs::PointCloud2 pc_;
-	pcl::toROSMsg(*veteran_pc_, pc_);
-	pc_.header.stamp = ros::Time::now();
-	pc_.header.frame_id = veteran_pc_->header.frame_id;
-	DCP_pub.publish(pc_);
-}
-
-void fresh_pc_callback(const sensor_msgs::PointCloud2ConstPtr msg)
-{
-	CloudIUTPtr single_pc_(new CloudIUT);
-	CloudIUTPtr output_pc_after (new CloudIUT);
-	CloudIUTPtr output_pc (new CloudIUT);
-
-	pcl::fromROSMsg(*msg, *single_pc_);
-    
-	if(!first_flag){
-		*veteran_pc_ = *single_pc_;		
-		first_flag = true;
-	}
-	
-	pcl::transformPointCloud(*single_pc_, *output_pc, transform_matrix);
-    for(size_t i=0;i<single_pc_->points.size();i++){
-        double distance = sqrt(pow(single_pc_->points[i].x, 2)+
-                pow(single_pc_->points[i].y, 2)+
-                pow(single_pc_->points[i].z, 2));
-        if(distance < 50){
-            output_pc_after->points.push_back(output_pc->points[i]);
-        }
-    }
-	
-
-    Eigen::Matrix4f inverse_transform_matrix = transform_matrix.inverse();
-    pcl::transformPointCloud(*output_pc_after, *output_save_pc_, inverse_transform_matrix);
-
-	controll_density(output_save_pc_);
-
-	extra_size = output_save_pc_->points.size();
-}
-
-
-int main(int argc, char** argv)
-{
-    ros::init(argc, argv, "density_controll_of_pointcloud_v3");
-    ros::NodeHandle n;
-	ros::NodeHandle nh("~");
-	nh.getParam("save_num", save_num);
-	nh.getParam("scan_num", scan_num);
-	nh.getParam("a", a);
-	nh.getParam("b", b);
-	nh.getParam("c", c);
-	nh.getParam("d", d);
-
-    ros::Subscriber sub_pc = n.subscribe("/nagayne_PointCloud2/fusioned", 10, fresh_pc_callback);
-    ros::Subscriber sub_lcl = n.subscribe("/odom", 10, lcl_callback);
-	DCP_pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 10);
-
-    nav_msgs::Odometry init_odom;
-    init_odom.header.frame_id = "/map";
-    init_odom.child_frame_id = "/base_link";
-    init_odom.pose.pose.position.x = 0.0;
-    init_odom.pose.pose.position.y = 0.0;
-    init_odom.pose.pose.position.z = 0.0;
-    init_odom.pose.pose.orientation.x = 0.0;
-    init_odom.pose.pose.orientation.y = 0.0;
-    init_odom.pose.pose.orientation.z = 0.0;
-    init_odom.pose.pose.orientation.w = 0.0;
-
-    odom_ = init_odom;
-
-	std::cout<<"start"<<std::endl;
-	
-	ros::spin();
 }

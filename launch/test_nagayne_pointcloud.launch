@@ -25,7 +25,7 @@
 	<!-- <include file="$(find nagayne_pointcloud)/launch/lcl_.launch"/> -->
 	<!-- <include file="$(find nagayne_pointcloud)/launch/nagayne_score.launch"/> -->
 <!--lcl-->
-	<node name="density_controll_of_pointcloud_v3"  pkg="nagayne_pointcloud" type="density_controll_of_pointcloud_v3" output="screen">
+	<node name="density_controll_of_pointcloud_v4"  pkg="nagayne_pointcloud" type="density_controll_of_pointcloud_v4" output="screen">
 		<!-- 	save_num > scan_num	 -->
 		<param name="save_num" type="int" value="5"/>
 		<param name="scan_num" type="int" value="5"/>
@@ -50,7 +50,7 @@
 	<include file="$(find sq_lidar)/launch/human_detection_3dlidar.launch"/>
 
 	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/stay.bag &#45;r 1"/> -->
-	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/move.bag &#45;r 1"/> -->
-	<node pkg="rosbag" name="player" type="play" args="--clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/human_detection.bag -r 1"/>
+	<node pkg="rosbag" name="player" type="play" args="--clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/move.bag -r 1"/>
+	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/human_detection.bag &#45;r 1"/> -->
 	<node pkg="rviz" name="rviz" type="rviz" args="-d /home/amsl/.rviz/nagayne_pointcloud.rviz"/>
 </launch>
