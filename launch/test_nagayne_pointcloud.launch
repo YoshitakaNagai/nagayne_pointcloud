@@ -52,5 +52,5 @@
 	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/stay.bag &#45;r 1"/> -->
 	<node pkg="rosbag" name="player" type="play" args="--clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/move.bag -r 1"/>
 	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/human_detection.bag &#45;r 1"/> -->
-	<node pkg="rviz" name="rviz" type="rviz" args="-d /home/amsl/.rviz/nagayne_pointcloud.rviz"/>
+	<node pkg="rviz" name="rviz" type="rviz" args="-d /home/amsl/.rviz/nagayne_pointcloud_v2.rviz"/>
 </launch>

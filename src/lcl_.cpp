@@ -36,7 +36,7 @@ author : Yudai Sadakuni
 #include <omp.h>
 #endif
 
-#include "nagayne_pointcloud/point_id.h"
+//#include "nagayne_pointcloud/point_id.h"
 
 using namespace std;
 
