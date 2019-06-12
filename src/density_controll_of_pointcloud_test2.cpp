@@ -47,10 +47,9 @@ class Nagayne
 		void fresh_pc_callback(const sensor_msgs::PointCloud2ConstPtr&);
 		
 		void controll_density(void);
-
-		CloudIUTPtr pt_lifespan_keeper(CloudIUTPtr);
-		CloudIUTPtr scorekeeper(CloudIUTPtr);
-		CloudIUTPtr pc_downsampling(CloudIUTPtr);
+		void pt_lifespan_keeper(void);
+		void scorekeeper(void);
+		void pc_downsampling(void);
 
 	private:
 		int save_num;
@@ -58,24 +57,27 @@ class Nagayne
 
 		bool fresh_pc_callback_flag = false;
 		bool lcl_callback_flag = false;
-		bool first_flag = false;
+		bool lidar_first_flag = false;
+		bool odom_first_flag = false;
 
 		float begin_time;
 		float tmp_time;
 		float Hz = 100;
 		float odom_x, odom_y, odom_z;
 		float odom_qx, odom_qy, odom_qz, odom_qw;
-		float tmp_odom_x = 0.0;
-		float tmp_odom_y = 0.0;
-		float tmp_odom_z = 0.0;
-		float tmp_odom_qx = 0.0;
-		float tmp_odom_qy = 0.0;
-		float tmp_odom_qz = 0.0;
-		float tmp_odom_qw = 0.0;
+		float tmp_odom_x;
+		float tmp_odom_y;
+		float tmp_odom_z;
+		float tmp_odom_qx;
+		float tmp_odom_qy;
+		float tmp_odom_qz;
+		float tmp_odom_qw;
+
 		float odom_dx, odom_dy, odom_dz;
-		float odom_dqx, odom_dqy, odom_dqz, odom_dqw;
 
 		double dR, dP, dY;
+		double R, P, Y;
+		double tmp_R, tmp_P, tmp_Y;
 		double a, b, c, d;
 		
 				
@@ -89,6 +91,11 @@ class Nagayne
 		nav_msgs::Odometry odom;
 
 		Eigen::Affine3f transform;
+		Eigen::Matrix4f H_transform;
+		Eigen::Matrix4f H_transform_XYZ;
+		Eigen::Matrix4f H_transform_R;
+		Eigen::Matrix4f H_transform_P;
+		Eigen::Matrix4f H_transform_Y;
 };
 
 
@@ -116,35 +123,29 @@ Nagayne::Nagayne(void)
 	nh.getParam("d", d);
 
 	transform = Eigen::Affine3f::Identity();
+	H_transform = Eigen::Matrix4f::Identity();
+	H_transform_XYZ = Eigen::Matrix4f::Identity();
+	H_transform_R = Eigen::Matrix4f::Identity();
+	H_transform_P = Eigen::Matrix4f::Identity();
+	H_transform_Y = Eigen::Matrix4f::Identity();
 
-	sub_pc = n.subscribe("/nagayne_PointCloud2/fusioned", 10, &Nagayne::fresh_pc_callback, this);
-    sub_lcl = n.subscribe("/odom", 10, &Nagayne::lcl_callback, this);
+	sub_pc = n.subscribe("/nagayne_PointCloud2/fusioned", 30, &Nagayne::fresh_pc_callback, this);
+    sub_lcl = n.subscribe("/odom", 30, &Nagayne::lcl_callback, this);
 
-	DCP_pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 10);
+	DCP_pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 30);
 }
 
 
-void Nagayne::controll_density(void){
+void Nagayne::controll_density(void)
+{
 	ros::Rate r(Hz);
 	while(ros::ok()){
 		if(fresh_pc_callback_flag && lcl_callback_flag){
-			std::cout << "flags : true" << std::endl;
-			
-			pcl::transformPointCloud(*veteran_pc_, *veteran_pc_, transform);
-			*fresh_pc_ = *scorekeeper(fresh_pc_);
-			//pcl::transformPointCloud(*veteran_pc_, *transformed_pc_, transform);
-			//veteran_pc_ = transformed_pc_;
-			std::cout << "before_veteran_pc_size : " << veteran_pc_->points.size() << std::endl;
+			scorekeeper();
 			*veteran_pc_ += *fresh_pc_;
-
-			std::cout << "veteran_pc_size : " << veteran_pc_->points.size() << std::endl;
-			*veteran_pc_ = *pt_lifespan_keeper(veteran_pc_);
-			
-			std::cout << "scored_veteran_pc_size : " << veteran_pc_->points.size() << std::endl;
-
-			*veteran_pc_ = *pc_downsampling(veteran_pc_);
-			
-			std::cout << "after_veteran_pc_size : " << veteran_pc_->points.size() << std::endl;
+			pcl::transformPointCloud(*veteran_pc_, *veteran_pc_, H_transform);
+			pt_lifespan_keeper();
+			pc_downsampling();
 			
 			pcl::toROSMsg(*veteran_pc_, pc_);
 			pc_.header.stamp = ros::Time::now();
@@ -164,95 +165,114 @@ void Nagayne::fresh_pc_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
 {
 	pcl::fromROSMsg(*msg, *fresh_pc_);
     
-	if(!first_flag){
+	if(!lidar_first_flag){
 		*veteran_pc_ = *fresh_pc_;
-		first_flag = true;
+		lidar_first_flag = true;
 	}
 	
 	fresh_pc_callback_flag = true;
-	//std::cout << "fresh_pc_callback_flag : " << fresh_pc_callback_flag << std::endl;
 }
 
 
 void Nagayne::lcl_callback(const nav_msgs::OdometryConstPtr &msg)
 {
 	odom = *msg;
+	
+	if(!odom_first_flag){
+		tmp_odom_x = odom.pose.pose.position.x;
+		tmp_odom_y = odom.pose.pose.position.y;
+		tmp_odom_z = odom.pose.pose.position.z;
+		
+		odom_qx = odom.pose.pose.orientation.x;
+		odom_qy = odom.pose.pose.orientation.y;
+		odom_qz = odom.pose.pose.orientation.z;
+		odom_qw = odom.pose.pose.orientation.w;
+		tf::Quaternion tf_quaternion(odom_qx, odom_qy, odom_qz, odom_qw);
+		tf::Matrix3x3 tf_matrix(tf_quaternion);
+		tf_matrix.getRPY(tmp_R, tmp_P, tmp_Y);
+		
+		odom_first_flag = true;
+	}
 
+	//translation
 	odom_x = odom.pose.pose.position.x;
 	odom_y = odom.pose.pose.position.y;
 	odom_z = odom.pose.pose.position.z;
-	odom_dx = odom_x - tmp_odom_x;
-	odom_dy = odom_y - tmp_odom_y;
-	odom_dz = odom_z - tmp_odom_z;
-	transform.translation() << odom_dx, odom_dy, odom_dz;
-
+	odom_dx = -(odom_x - tmp_odom_x);
+	odom_dy = -(odom_y - tmp_odom_y);
+	odom_dz = -(odom_z - tmp_odom_z);
+	
+	//Homogeneous
+	H_transform_XYZ(0,3) = odom_dx;
+	H_transform_XYZ(1,3) = odom_dy;
+	H_transform_XYZ(2,3) = odom_dz;
+	
+	//rotation
 	odom_qx = odom.pose.pose.orientation.x;
 	odom_qy = odom.pose.pose.orientation.y;
 	odom_qz = odom.pose.pose.orientation.z;
 	odom_qw = odom.pose.pose.orientation.w;
-	odom_dqx = odom_qx - tmp_odom_qx;
-	odom_dqy = odom_qy - tmp_odom_qy;
-	odom_dqz = odom_qz - tmp_odom_qz;
-	odom_dqw = odom_qw - tmp_odom_qw;
-	tf::Quaternion tf_quaternion(odom_dqx, odom_dqy, odom_dqz, odom_dqw);
+	tf::Quaternion tf_quaternion(odom_qx, odom_qy, odom_qz, odom_qw);
 	tf::Matrix3x3 tf_matrix(tf_quaternion);
-	tf_matrix.getRPY(dR, dP, dY);
-	transform.rotate(Eigen::AngleAxisf((float)dR, Eigen::Vector3f::UnitX()));
-	transform.rotate(Eigen::AngleAxisf((float)dP, Eigen::Vector3f::UnitY()));
-	transform.rotate(Eigen::AngleAxisf((float)dY, Eigen::Vector3f::UnitZ()));
+	tf_matrix.getRPY(R, P, Y);
+	
+	dR = -(R - tmp_R);
+	dP = -(P - tmp_P);
+	dY = -(Y - tmp_Y);
+
+	//Homogeneous
+	H_transform_R(1,1) = cos(dR);
+	H_transform_R(1,2) = -sin(dR);
+	H_transform_R(2,1) = sin(dR);
+	H_transform_R(2,2) = cos(dR);
+	H_transform_P(0,0) = cos(dP);
+	H_transform_P(0,2) = sin(dP);
+	H_transform_P(2,0) = -sin(dP);
+	H_transform_P(2,2) = cos(dP);
+	H_transform_Y(0,0) = cos(dY);
+	H_transform_Y(0,1) = -sin(dY);
+	H_transform_Y(1,0) = sin(dY);
+	H_transform_Y(1,1) = cos(dY);
+	H_transform = H_transform_XYZ * H_transform_R * H_transform_P * H_transform_Y;
+
+	std::cout << H_transform << std::endl;
 
 	tmp_odom_x = odom_x;
 	tmp_odom_y = odom_y;
 	tmp_odom_z = odom_z;
-
-	tmp_odom_qx = odom_qx;
-	tmp_odom_qy = odom_qy;
-	tmp_odom_qz = odom_qz;
-	tmp_odom_qw = odom_qw;
-
+	tmp_R = R;
+	tmp_P = P;
+	tmp_Y = Y;
+	
 	lcl_callback_flag = true;
-	//std::cout << "lcl_callback_flag : " << lcl_callback_flag << std::endl;
 }
 
 
-CloudIUTPtr Nagayne::pt_lifespan_keeper(CloudIUTPtr vpc)
+void Nagayne::pt_lifespan_keeper(void)
 {
 	float dt = 1/Hz;
-	std::cout << "dt=" << dt << std::endl;
-	for(auto& pt : vpc->points){
+	for(auto& pt : veteran_pc_->points){
 		pt.v -= dt;
-		//std::cout << "pt.v : " << pt.v << std::endl;
 	}
-	return vpc;
 }
 
 
-CloudIUTPtr Nagayne::scorekeeper(CloudIUTPtr before_scored_pc_)
+void Nagayne::scorekeeper(void)
 {
-	for(auto& pt : before_scored_pc_->points){
+	for(auto& pt : fresh_pc_->points){
 		float unflatness_score = pt.s/2;
 		float score = (float)a*unflatness_score + (float)c;
 		pt.v = score;
 		//pt.v = (float)b*sqrt(pow(pt.x,2) + pow(pt.y,2) + pow(pt.z,2))/30.0 + c;
 	}
-
-	return before_scored_pc_;
 }
 
 
-CloudIUTPtr Nagayne::pc_downsampling(CloudIUTPtr after_scored_pc)
+void Nagayne::pc_downsampling(void)
 {
-	std::cout << "after_scored_pc size" << after_scored_pc->points.size() << std::endl;
-	CloudIUTPtr pc_filtered(new CloudIUT);
 	pcl::PassThrough<PointIUT> pass;
-	pass.setInputCloud(after_scored_pc);
+	pass.setInputCloud(veteran_pc_);
 	pass.setFilterFieldName ("v");
-	std::cout << "a+c=" << a + c << std::endl;
 	pass.setFilterLimits(0.0, a+c);
-	//pass.setFilterLimits (-100000, 100000);
-	//pass.setFilterLimitsNegative(true);
-	pass.filter(*pc_filtered);
-
-	std::cout << "pc_filtered size" << pc_filtered->points.size() << std::endl;
-	return pc_filtered;
+	pass.filter(*veteran_pc_);
 }
