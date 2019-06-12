@@ -74,7 +74,6 @@ class Nagayne
 		float tmp_odom_qw;
 
 		float odom_dx, odom_dy, odom_dz;
-		//float odom_dqx, odom_dqy, odom_dqz, odom_dqw;
 
 		double dR, dP, dY;
 		double R, P, Y;
@@ -152,7 +151,6 @@ void Nagayne::controll_density(void)
 
 			//pcl::transformPointCloud(*veteran_pc_, *veteran_pc_, transform);
 			pcl::transformPointCloud(*veteran_pc_, *veteran_pc_, H_transform);
-			//pcl::transformPointCloud(*veteran_pc_, *veteran_pc_, H_transform_XYZ);
 			
 			std::cout << "veteran_pc_size : " << veteran_pc_->points.size() << std::endl;
 			pt_lifespan_keeper();
@@ -161,10 +159,8 @@ void Nagayne::controll_density(void)
 
 			pc_downsampling();
 
-			std::cout << "downsampled_veteran_pc_size : " << veteran_pc_->points.size() << std::endl;
+			//std::cout << "downsampled_veteran_pc_size : " << veteran_pc_->points.size() << std::endl;
 			
-			//pc_.height = veteran_pc_->points.size();
-			//pc_.width = 1;
 			pcl::toROSMsg(*veteran_pc_, pc_);
 			pc_.header.stamp = ros::Time::now();
 			pc_.header.frame_id = veteran_pc_->header.frame_id;
@@ -218,11 +214,8 @@ void Nagayne::lcl_callback(const nav_msgs::OdometryConstPtr &msg)
 	odom_x = odom.pose.pose.position.x;
 	odom_y = odom.pose.pose.position.y;
 	odom_z = odom.pose.pose.position.z;
-	//odom_dx = odom_x - tmp_odom_x;
 	odom_dx = -(odom_x - tmp_odom_x);
-	//odom_dy = odom_y - tmp_odom_y;
 	odom_dy = -(odom_y - tmp_odom_y);
-	//odom_dz = odom_z - tmp_odom_z;
 	odom_dz = -(odom_z - tmp_odom_z);
 	//Affine
 	transform.translation() << odom_dx, odom_dy, odom_dz;
@@ -237,22 +230,12 @@ void Nagayne::lcl_callback(const nav_msgs::OdometryConstPtr &msg)
 	odom_qy = odom.pose.pose.orientation.y;
 	odom_qz = odom.pose.pose.orientation.z;
 	odom_qw = odom.pose.pose.orientation.w;
-	/*
-	odom_dqx = odom_qx - tmp_odom_qx;
-	odom_dqy = odom_qy - tmp_odom_qy;
-	odom_dqz = odom_qz - tmp_odom_qz;
-	odom_dqw = odom_qw - tmp_odom_qw;
-	*/
-	//tf::Quaternion tf_quaternion(odom_dqx, odom_dqy, odom_dqz, odom_dqw);
 	tf::Quaternion tf_quaternion(odom_qx, odom_qy, odom_qz, odom_qw);
 	tf::Matrix3x3 tf_matrix(tf_quaternion);
 	tf_matrix.getRPY(R, P, Y);
 	
-	//dR = R - tmp_R;
 	dR = -(R - tmp_R);
-	//dP = P - tmp_P;
 	dP = -(P - tmp_P);
-	//dY = Y - tmp_Y;
 	dY = -(Y - tmp_Y);
 	
 	//Affine
@@ -279,12 +262,6 @@ void Nagayne::lcl_callback(const nav_msgs::OdometryConstPtr &msg)
 	tmp_odom_x = odom_x;
 	tmp_odom_y = odom_y;
 	tmp_odom_z = odom_z;
-	/*
-	tmp_odom_qx = odom_qx;
-	tmp_odom_qy = odom_qy;
-	tmp_odom_qz = odom_qz;
-	tmp_odom_qw = odom_qw;
-	*/
 	tmp_R = R;
 	tmp_P = P;
 	tmp_Y = Y;
@@ -300,7 +277,6 @@ void Nagayne::pt_lifespan_keeper(void)
 	
 	for(auto& pt : veteran_pc_->points){
 		pt.v -= dt;
-		//std::cout << "pt.v : " << pt.v << std::endl;
 	}
 }
 
@@ -323,7 +299,6 @@ void Nagayne::pc_downsampling(void)
 	pass.setInputCloud(veteran_pc_);
 	pass.setFilterFieldName ("v");
 	pass.setFilterLimits(0.0, a+c);
-	//pass.setFilterLimitsNegative(true);
 	pass.filter(*veteran_pc_);
 
 	std::cout << "filtered veteran_pc size = " << veteran_pc_->points.size() << std::endl;
