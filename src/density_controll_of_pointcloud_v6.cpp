@@ -133,7 +133,6 @@ Nagayne::Nagayne(void)
     sub_lcl = n.subscribe("/odom", 30, &Nagayne::lcl_callback, this);
 
 	DCP_pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 30);
-	//DCP_pub = n.advertise<CloudIUT>("/nagayne_PointCloud2/density_controlled", 30);
 }
 
 
@@ -142,30 +141,16 @@ void Nagayne::controll_density(void)
 	ros::Rate r(Hz);
 	while(ros::ok()){
 		if(fresh_pc_callback_flag && lcl_callback_flag){
-			//std::cout << "flags : true" << std::endl;
-			
-			
 			scorekeeper();
-			std::cout << "before_veteran_pc_size : " << veteran_pc_->points.size() << std::endl;
 			*veteran_pc_ += *fresh_pc_;
-
-			//pcl::transformPointCloud(*veteran_pc_, *veteran_pc_, transform);
 			pcl::transformPointCloud(*veteran_pc_, *veteran_pc_, H_transform);
-			
-			std::cout << "veteran_pc_size : " << veteran_pc_->points.size() << std::endl;
 			pt_lifespan_keeper();
-			
-			//std::cout << "scored_veteran_pc_size : " << veteran_pc_->points.size() << std::endl;
-
 			pc_downsampling();
-
-			//std::cout << "downsampled_veteran_pc_size : " << veteran_pc_->points.size() << std::endl;
 			
 			pcl::toROSMsg(*veteran_pc_, pc_);
 			pc_.header.stamp = ros::Time::now();
 			pc_.header.frame_id = veteran_pc_->header.frame_id;
 			DCP_pub.publish(pc_);
-			//DCP_pub.publish(*veteran_pc_);
 			
 			fresh_pc_callback_flag = false;
 			lcl_callback_flag = false;
@@ -186,7 +171,6 @@ void Nagayne::fresh_pc_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
 	}
 	
 	fresh_pc_callback_flag = true;
-	//std::cout << "fresh_pc_callback_flag : " << fresh_pc_callback_flag << std::endl;
 }
 
 
@@ -217,13 +201,11 @@ void Nagayne::lcl_callback(const nav_msgs::OdometryConstPtr &msg)
 	odom_dx = -(odom_x - tmp_odom_x);
 	odom_dy = -(odom_y - tmp_odom_y);
 	odom_dz = -(odom_z - tmp_odom_z);
-	//Affine
-	transform.translation() << odom_dx, odom_dy, odom_dz;
+	
 	//Homogeneous
 	H_transform_XYZ(0,3) = odom_dx;
 	H_transform_XYZ(1,3) = odom_dy;
 	H_transform_XYZ(2,3) = odom_dz;
-	
 	
 	//rotation
 	odom_qx = odom.pose.pose.orientation.x;
@@ -237,11 +219,7 @@ void Nagayne::lcl_callback(const nav_msgs::OdometryConstPtr &msg)
 	dR = -(R - tmp_R);
 	dP = -(P - tmp_P);
 	dY = -(Y - tmp_Y);
-	
-	//Affine
-	transform.rotate(Eigen::AngleAxisf((float)dR, Eigen::Vector3f::UnitX()));
-	transform.rotate(Eigen::AngleAxisf((float)dP, Eigen::Vector3f::UnitY()));
-	transform.rotate(Eigen::AngleAxisf((float)dY, Eigen::Vector3f::UnitZ()));
+
 	//Homogeneous
 	H_transform_R(1,1) = cos(dR);
 	H_transform_R(1,2) = -sin(dR);
@@ -265,16 +243,14 @@ void Nagayne::lcl_callback(const nav_msgs::OdometryConstPtr &msg)
 	tmp_R = R;
 	tmp_P = P;
 	tmp_Y = Y;
+	
 	lcl_callback_flag = true;
-	//std::cout << "lcl_callback_flag : " << lcl_callback_flag << std::endl;
 }
 
 
 void Nagayne::pt_lifespan_keeper(void)
 {
 	float dt = 1/Hz;
-	std::cout << "dt=" << dt << std::endl;
-	
 	for(auto& pt : veteran_pc_->points){
 		pt.v -= dt;
 	}
@@ -294,12 +270,9 @@ void Nagayne::scorekeeper(void)
 
 void Nagayne::pc_downsampling(void)
 {
-	std::cout << "verteran_pc size = " << veteran_pc_->points.size() << std::endl;
 	pcl::PassThrough<PointIUT> pass;
 	pass.setInputCloud(veteran_pc_);
 	pass.setFilterFieldName ("v");
 	pass.setFilterLimits(0.0, a+c);
 	pass.filter(*veteran_pc_);
-
-	std::cout << "filtered veteran_pc size = " << veteran_pc_->points.size() << std::endl;
 }
