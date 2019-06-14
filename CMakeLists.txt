@@ -190,59 +190,37 @@ target_link_libraries(rm_ground_lcl_
 	${PCL_LIBRARIES}
 )
 
-add_executable(curvature_calculator src/curvature_calculator.cpp)
-target_link_libraries(curvature_calculator
+# add_executable(curvature_calculator src/curvature_calculator.cpp)
+# target_link_libraries(curvature_calculator
+# 	${catkin_LIBRARIES}
+# 	${OpenCV_LIBRARIES}
+# 	${PCL_LIBRARIES}
+# )
+
+# add_executable(unflatness_calculator src/unflatness_calculator.cpp)
+# add_dependencies(unflatness_calculator ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# target_link_libraries(unflatness_calculator
+# 	${catkin_LIBRARIES}
+# 	${OpenCV_LIBRARIES}
+# 	${PCL_LIBRARIES}
+# )
+
+add_executable(density_controll_of_pointcloud src/density_controll_of_pointcloud.cpp)
+target_link_libraries(density_controll_of_pointcloud
 	${catkin_LIBRARIES}
 	${OpenCV_LIBRARIES}
 	${PCL_LIBRARIES}
 )
 
-add_executable(unflatness_calculator src/unflatness_calculator.cpp)
-add_dependencies(unflatness_calculator ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(unflatness_calculator
+add_executable(density_controll_of_pointcloud_test1 src/density_controll_of_pointcloud_test1.cpp)
+target_link_libraries(density_controll_of_pointcloud_test1
 	${catkin_LIBRARIES}
 	${OpenCV_LIBRARIES}
 	${PCL_LIBRARIES}
 )
 
-add_executable(density_controll_of_pointcloud_v1 src/density_controll_of_pointcloud_v1.cpp)
-add_dependencies(density_controll_of_pointcloud_v1 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(density_controll_of_pointcloud_v1
-	${catkin_LIBRARIES}
-	${OpenCV_LIBRARIES}
-	${PCL_LIBRARIES}
-)
-
-add_executable(density_controll_of_pointcloud_v2 src/density_controll_of_pointcloud_v2.cpp)
-target_link_libraries(density_controll_of_pointcloud_v2
-	${catkin_LIBRARIES}
-	${OpenCV_LIBRARIES}
-	${PCL_LIBRARIES}
-)
-
-add_executable(density_controll_of_pointcloud_v3 src/density_controll_of_pointcloud_v3.cpp)
-target_link_libraries(density_controll_of_pointcloud_v3
-	${catkin_LIBRARIES}
-	${OpenCV_LIBRARIES}
-	${PCL_LIBRARIES}
-)
-
-add_executable(density_controll_of_pointcloud_v4 src/density_controll_of_pointcloud_v4.cpp)
-target_link_libraries(density_controll_of_pointcloud_v4
-	${catkin_LIBRARIES}
-	${OpenCV_LIBRARIES}
-	${PCL_LIBRARIES}
-)
-
-add_executable(density_controll_of_pointcloud_v5 src/density_controll_of_pointcloud_v5.cpp)
-target_link_libraries(density_controll_of_pointcloud_v5
-	${catkin_LIBRARIES}
-	${OpenCV_LIBRARIES}
-	${PCL_LIBRARIES}
-)
-
-add_executable(density_controll_of_pointcloud_v6 src/density_controll_of_pointcloud_v6.cpp)
-target_link_libraries(density_controll_of_pointcloud_v6
+add_executable(density_controll_of_pointcloud_test2 src/density_controll_of_pointcloud_test2.cpp)
+target_link_libraries(density_controll_of_pointcloud_test2
 	${catkin_LIBRARIES}
 	${OpenCV_LIBRARIES}
 	${PCL_LIBRARIES}

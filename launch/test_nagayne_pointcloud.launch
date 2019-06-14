@@ -17,7 +17,7 @@
 		<remap from="~/cloud" to="/cloud" />
 	</node>
 
-	<node pkg="nagayne_pointcloud" name="unflatness_calculator" type="unflatness_calculator"/>
+	<node pkg="unflatness_evaluator" name="unflatness_calculator" type="unflatness_calculator"/>
 	
 	<node pkg="nagayne_pointcloud" name="pointcloud_hub" type="pointcloud_hub"/>
 	
@@ -25,7 +25,7 @@
 	<!-- <include file="$(find nagayne_pointcloud)/launch/lcl_.launch"/> -->
 	<!-- <include file="$(find nagayne_pointcloud)/launch/nagayne_score.launch"/> -->
 <!--lcl-->
-	<node name="density_controll_of_pointcloud_v5"  pkg="nagayne_pointcloud" type="density_controll_of_pointcloud_v5" output="screen">
+	<node name="density_controll_of_pointcloud"  pkg="nagayne_pointcloud" type="density_controll_of_pointcloud" output="screen">
 		<!-- 	save_num > scan_num	 -->
 		<param name="save_num" type="int" value="10"/>
 		<param name="scan_num" type="int" value="10"/>
