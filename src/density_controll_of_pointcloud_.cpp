@@ -32,10 +32,6 @@
 #endif
 
 
-typedef pcl::PointXYZHSV PointIUT;
-typedef pcl::PointCloud<PointIUT> CloudIUT;
-typedef pcl::PointCloud<PointIUT>::Ptr CloudIUTPtr;
-
 
 class Nagayne
 {
@@ -48,7 +44,7 @@ class Nagayne
 		void controll_density(void);
 		void pt_lifespan_keeper(void);
 		void scorekeeper(void);
-		CloudIUTPtr pc_downsampling(void);
+		void pc_downsampling(void);
 
 	private:
 		int save_num;
@@ -87,22 +83,12 @@ class Nagayne
 		tf::StampedTransform transform;
      	//geometry_msgs::TransformStamped _transform;
 
+		typedef pcl::PointXYZHSV PointIUT;
+		typedef pcl::PointCloud<PointIUT> CloudIUT;
+		typedef pcl::PointCloud<PointIUT>::Ptr CloudIUTPtr;
 		CloudIUTPtr veteran_pc_ {new CloudIUT};
 		CloudIUTPtr fresh_pc_ {new CloudIUT};
 		CloudIUTPtr transformed_pc_ {new CloudIUT};
-
-		Eigen::Matrix4f dH_transform_local = Eigen::Matrix4f::Identity();
-		Eigen::Vector3f V_transform_dXYZ = Eigen::Vector3f::Zero();
-		Eigen::Vector3f V_dXYZ = Eigen::Vector3f::Zero();
-		
-		Eigen::Matrix3f H_transform_R = Eigen::Matrix3f::Identity();
-		Eigen::Matrix3f H_transform_P = Eigen::Matrix3f::Identity();
-		Eigen::Matrix3f H_transform_Y = Eigen::Matrix3f::Identity();
-		Eigen::Matrix3f H_transform_dR = Eigen::Matrix3f::Identity();
-		Eigen::Matrix3f H_transform_dP = Eigen::Matrix3f::Identity();
-		Eigen::Matrix3f H_transform_dY = Eigen::Matrix3f::Identity();
-		Eigen::Matrix3f H_rotation_d = Eigen::Matrix3f::Identity();
-
 };
 
 
@@ -153,24 +139,19 @@ void Nagayne::controll_density(void)
 		if(fresh_pc_callback_flag && lcl_callback_flag && tf_listen_flag){
 			scorekeeper();
 			pt_lifespan_keeper();
+			pc_downsampling();
 			//transform_flag = pcl_ros::transformPointCloud(target_frame, target_time, *veteran_pc_, fixed_frame, *transformed_pc_, listener);
 			pcl::toROSMsg(*veteran_pc_, veteran_pc);
 			pcl_ros::transformPointCloud(target_frame, veteran_pc, transformed_pc, listener);
 			pcl::fromROSMsg(transformed_pc, *veteran_pc_);
 			//*veteran_pc_ = *transformed_pc_;
 			pcl::toROSMsg(*fresh_pc_, fresh_pc);
-			pcl_ros::transformPointCloud(target_frame, fresh_pc, transformed_pc, listener);
+			pcl_ros::transformPointCloud(fixed_frame, fresh_pc, transformed_pc, listener);
 			pcl::fromROSMsg(transformed_pc, *fresh_pc_);
 			//veteran_pc_->header.stamp = fresh_pc_->header.stamp;
 			*veteran_pc_ += *fresh_pc_;
-			//veteran_pc_->header.frame_id = target_frame;
-			/*
-			pcl::toROSMsg(*veteran_pc_, veteran_pc);
-			pcl_ros::transformPointCloud(fixed_frame, veteran_pc, transformed_pc, listener);
-			pcl::fromROSMsg(transformed_pc, *veteran_pc_);
-			*/
-			*veteran_pc_ = *pc_downsampling();
-			
+			veteran_pc_->header.frame_id = fixed_frame;
+				
 			pcl::toROSMsg(*veteran_pc_, pub_pc);
 			pub_pc.header.stamp = ros::Time::now();
 			DCP_pub.publish(pub_pc);
@@ -227,16 +208,13 @@ void Nagayne::scorekeeper(void)
 }
 
 
-CloudIUTPtr Nagayne::pc_downsampling(void)
+void Nagayne::pc_downsampling(void)
 {
 	pcl::PassThrough<PointIUT> pass;
-	CloudIUTPtr filtered_pc_ {new CloudIUT};
 	//pass.setInputCloud(transformed_pc_);
 	pass.setInputCloud(veteran_pc_);
 	pass.setFilterFieldName ("v");
 	pass.setFilterLimits(0.0, a+c);
-	pass.filter(*filtered_pc_);
-
-	return filtered_pc_;
+	pass.filter(*veteran_pc_);
 }
 

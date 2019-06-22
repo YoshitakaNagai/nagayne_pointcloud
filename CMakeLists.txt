@@ -212,6 +212,13 @@ target_link_libraries(density_controll_of_pointcloud
 	${PCL_LIBRARIES}
 )
 
+add_executable(density_controll_of_pointcloud_ src/density_controll_of_pointcloud_.cpp)
+target_link_libraries(density_controll_of_pointcloud_
+	${catkin_LIBRARIES}
+	${OpenCV_LIBRARIES}
+	${PCL_LIBRARIES}
+)
+
 add_executable(density_controll_of_pointcloud_test1 src/density_controll_of_pointcloud_test1.cpp)
 target_link_libraries(density_controll_of_pointcloud_test1
 	${catkin_LIBRARIES}
