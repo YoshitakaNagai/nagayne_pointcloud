@@ -42,7 +42,7 @@ class Nagayne
 	public:
 		Nagayne();
 
-		void lcl_callback(const nav_msgs::OdometryConstPtr&);
+		void odom_callback(const nav_msgs::OdometryConstPtr&);
 		void fresh_pc_callback(const sensor_msgs::PointCloud2ConstPtr&);
 		
 		void controll_density(void);
@@ -51,26 +51,20 @@ class Nagayne
 		CloudIUTPtr pc_downsampling(void);
 
 	private:
-		int save_num;
-		int scan_num;
-
 		bool fresh_pc_callback_flag = false;
-		bool lcl_callback_flag = false;
+		bool odom_callback_flag = false;
 		bool lidar_first_flag = false;
 		bool odom_first_flag = false;
 		bool tf_listen_flag = false;
-		bool transform_flag = false;
 
-		float begin_time;
-		float tmp_time;
 		float Hz = 100;
+		float Hokuyo_UTM_30LX_FEW_max_range = 30.0;
 
-		double a, b, c, d;
+		double uf_score_rate, distance_score, min_lifespan;
 				
 		ros::Subscriber sub_pc;
-		ros::Subscriber sub_lcl;	
+		ros::Subscriber sub_odom;	
 		ros::Publisher DCP_pub;
-		ros::Time target_time;
 	
 		std::string target_frame = "/odom";
 		std::string fixed_frame = "/centerlaser_";
@@ -80,29 +74,14 @@ class Nagayne
 		sensor_msgs::PointCloud2 fresh_pc;
 		sensor_msgs::PointCloud2 transformed_pc;
 		
-		nav_msgs::Odometry init_odom;
 		nav_msgs::Odometry odom;
 		
 		tf::TransformListener listener;
 		tf::StampedTransform transform;
-     	//geometry_msgs::TransformStamped _transform;
 
 		CloudIUTPtr veteran_pc_ {new CloudIUT};
 		CloudIUTPtr fresh_pc_ {new CloudIUT};
 		CloudIUTPtr transformed_pc_ {new CloudIUT};
-
-		Eigen::Matrix4f dH_transform_local = Eigen::Matrix4f::Identity();
-		Eigen::Vector3f V_transform_dXYZ = Eigen::Vector3f::Zero();
-		Eigen::Vector3f V_dXYZ = Eigen::Vector3f::Zero();
-		
-		Eigen::Matrix3f H_transform_R = Eigen::Matrix3f::Identity();
-		Eigen::Matrix3f H_transform_P = Eigen::Matrix3f::Identity();
-		Eigen::Matrix3f H_transform_Y = Eigen::Matrix3f::Identity();
-		Eigen::Matrix3f H_transform_dR = Eigen::Matrix3f::Identity();
-		Eigen::Matrix3f H_transform_dP = Eigen::Matrix3f::Identity();
-		Eigen::Matrix3f H_transform_dY = Eigen::Matrix3f::Identity();
-		Eigen::Matrix3f H_rotation_d = Eigen::Matrix3f::Identity();
-
 };
 
 
@@ -122,15 +101,12 @@ Nagayne::Nagayne(void)
 	ros::NodeHandle n;
 	ros::NodeHandle nh("~");
 
-	nh.getParam("save_num", save_num);
-	nh.getParam("scan_num", scan_num);
-	nh.getParam("a", a);
-	nh.getParam("b", b);
-	nh.getParam("c", c);
-	nh.getParam("d", d);
+	nh.getParam("uf_score_rate", uf_score_rate);
+	nh.getParam("distance_score", distance_score);
+	nh.getParam("min_lifespan", min_lifespan);
 
 	sub_pc = n.subscribe("/nagayne_PointCloud2/fusioned", 30, &Nagayne::fresh_pc_callback, this);
-    sub_lcl = n.subscribe("/odom", 30, &Nagayne::lcl_callback, this);
+    sub_odom = n.subscribe("/odom", 30, &Nagayne::odom_callback, this);
 
 	DCP_pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 30);
 }
@@ -142,7 +118,6 @@ void Nagayne::controll_density(void)
 	while(ros::ok()){
 		try{
        		listener.lookupTransform("/odom","/centerlaser_", ros::Time(0), transform);
-       		//tf::transformStampedTFToMsg(transform, _transform);
 			tf_listen_flag = true;
      	}   
      	catch (tf::TransformException ex){
@@ -150,34 +125,28 @@ void Nagayne::controll_density(void)
        		ros::Duration(1.0).sleep();
     	} 
 		
-		if(fresh_pc_callback_flag && lcl_callback_flag && tf_listen_flag){
+		if(fresh_pc_callback_flag && odom_callback_flag && tf_listen_flag){
 			scorekeeper();
 			pt_lifespan_keeper();
-			//transform_flag = pcl_ros::transformPointCloud(target_frame, target_time, *veteran_pc_, fixed_frame, *transformed_pc_, listener);
+			
 			pcl::toROSMsg(*veteran_pc_, veteran_pc);
 			pcl_ros::transformPointCloud(target_frame, veteran_pc, transformed_pc, listener);
 			pcl::fromROSMsg(transformed_pc, *veteran_pc_);
-			//*veteran_pc_ = *transformed_pc_;
+			
 			pcl::toROSMsg(*fresh_pc_, fresh_pc);
 			pcl_ros::transformPointCloud(target_frame, fresh_pc, transformed_pc, listener);
 			pcl::fromROSMsg(transformed_pc, *fresh_pc_);
-			//veteran_pc_->header.stamp = fresh_pc_->header.stamp;
+			
 			*veteran_pc_ += *fresh_pc_;
-			//veteran_pc_->header.frame_id = target_frame;
-			/*
-			pcl::toROSMsg(*veteran_pc_, veteran_pc);
-			pcl_ros::transformPointCloud(fixed_frame, veteran_pc, transformed_pc, listener);
-			pcl::fromROSMsg(transformed_pc, *veteran_pc_);
-			*/
+					
 			*veteran_pc_ = *pc_downsampling();
 			
 			pcl::toROSMsg(*veteran_pc_, pub_pc);
 			pub_pc.header.stamp = ros::Time::now();
 			DCP_pub.publish(pub_pc);
 			fresh_pc_callback_flag = false;
-			lcl_callback_flag = false;
+			odom_callback_flag = false;
 			tf_listen_flag = false;
-			transform_flag = false;
 		}
 		r.sleep();
 		ros::spinOnce();
@@ -198,18 +167,16 @@ void Nagayne::fresh_pc_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
 }
 
 
-void Nagayne::lcl_callback(const nav_msgs::OdometryConstPtr &msg)
+void Nagayne::odom_callback(const nav_msgs::OdometryConstPtr &msg)
 {
 	odom = *msg;
-	target_time = odom.header.stamp;
-	lcl_callback_flag = true;
+	odom_callback_flag = true;
 }
 
 
 void Nagayne::pt_lifespan_keeper(void)
 {
 	float dt = 1/Hz;
-	//for(auto& pt : transformed_pc_->points){
 	for(auto& pt : veteran_pc_->points){
 		pt.v -= dt;
 	}
@@ -220,9 +187,9 @@ void Nagayne::scorekeeper(void)
 {
 	for(auto& pt : fresh_pc_->points){
 		float unflatness_score = pt.s/2;
-		float score = (float)a*unflatness_score + (float)c;
+		float score = (float)uf_score_rate * unflatness_score + (float)min_lifespan;
 		pt.v = score;
-		//pt.v = (float)b*sqrt(pow(pt.x,2) + pow(pt.y,2) + pow(pt.z,2))/30.0 + c;
+		//pt.v = (float)distance_score * sqrt(pow(pt.x,2) + pow(pt.y,2) + pow(pt.z,2)) / Hokuyo_UTM_30LX_FEW_max_range + min_lifespan;
 	}
 }
 
@@ -231,10 +198,9 @@ CloudIUTPtr Nagayne::pc_downsampling(void)
 {
 	pcl::PassThrough<PointIUT> pass;
 	CloudIUTPtr filtered_pc_ {new CloudIUT};
-	//pass.setInputCloud(transformed_pc_);
 	pass.setInputCloud(veteran_pc_);
 	pass.setFilterFieldName ("v");
-	pass.setFilterLimits(0.0, a+c);
+	pass.setFilterLimits(0.0, uf_score_rate + min_lifespan);
 	pass.filter(*filtered_pc_);
 
 	return filtered_pc_;

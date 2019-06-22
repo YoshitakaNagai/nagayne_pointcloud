@@ -21,19 +21,10 @@
 	
 	<node pkg="nagayne_pointcloud" name="pointcloud_hub" type="pointcloud_hub"/>
 	
-	<!-- <include file="$(find sadayne_pointcloud)/launch/lcl.launch"/> -->
-	<!-- <include file="$(find nagayne_pointcloud)/launch/lcl_.launch"/> -->
-	<!-- <include file="$(find nagayne_pointcloud)/launch/nagayne_score.launch"/> -->
-<!--lcl-->
-	<!-- <node name="density_controll_of_pointcloud_"  pkg="nagayne_pointcloud" type="density_controll_of_pointcloud_" output="screen"> -->
-	<node name="density_controll_of_pointcloud_test2"  pkg="nagayne_pointcloud" type="density_controll_of_pointcloud_test2" output="screen">
-		<!-- 	save_num > scan_num	 -->
-		<param name="save_num" type="int" value="10"/>
-		<param name="scan_num" type="int" value="10"/>
-		<param name="a" type="double" value="1.0"/>
-		<param name="b" type="double" value="1.0"/>
-		<param name="c" type="double" value="1.0"/>
-		<param name="d" type="double" value="1.0"/>
+	<node name="pointcloud_lifespan_keeper"  pkg="nagayne_pointcloud" type="pointcloud_lifespan_keeper" output="screen">
+		<param name="uf_score_rate" type="double" value="1.0"/>
+		<param name="distance_score" type="double" value="1.0"/>
+		<param name="min_lifespan" type="double" value="1.0"/>
 		<remap from="/nagayne_PointCloud2/fusioned" to="/cloud/tf" />
 	</node>
 

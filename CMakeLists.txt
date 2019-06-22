@@ -162,13 +162,6 @@ include_directories(
 # add_executable(${PROJECT_NAME}_node src/sadayne_pointcloud_node.cpp)
 
 
-add_executable(lcl_ src/lcl_.cpp)
-target_link_libraries(lcl_
-	${catkin_LIBRARIES}
-	${OpenCV_LIBRARIES}
-	${PCL_LIBRARIES}
-)
-
 add_executable(pointcloud_hub src/pointcloud_hub.cpp)
 target_link_libraries(pointcloud_hub
 	${catkin_LIBRARIES}
@@ -176,58 +169,15 @@ target_link_libraries(pointcloud_hub
 	${PCL_LIBRARIES}
 )
 
-add_executable(transform_pointcloud_ src/transform_pointcloud_.cpp)
-target_link_libraries(transform_pointcloud_
+add_executable(pointcloud_lifespan_keeper src/pointcloud_lifespan_keeper.cpp)
+target_link_libraries(pointcloud_lifespan_keeper
 	${catkin_LIBRARIES}
 	${OpenCV_LIBRARIES}
 	${PCL_LIBRARIES}
 )
 
-add_executable(rm_ground_lcl_ src/rm_ground_lcl_.cpp)
-target_link_libraries(rm_ground_lcl_
-	${catkin_LIBRARIES}
-	${OpenCV_LIBRARIES}
-	${PCL_LIBRARIES}
-)
-
-# add_executable(curvature_calculator src/curvature_calculator.cpp)
-# target_link_libraries(curvature_calculator
-# 	${catkin_LIBRARIES}
-# 	${OpenCV_LIBRARIES}
-# 	${PCL_LIBRARIES}
-# )
-
-# add_executable(unflatness_calculator src/unflatness_calculator.cpp)
-# add_dependencies(unflatness_calculator ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(unflatness_calculator
-# 	${catkin_LIBRARIES}
-# 	${OpenCV_LIBRARIES}
-# 	${PCL_LIBRARIES}
-# )
-
-add_executable(density_controll_of_pointcloud src/density_controll_of_pointcloud.cpp)
-target_link_libraries(density_controll_of_pointcloud
-	${catkin_LIBRARIES}
-	${OpenCV_LIBRARIES}
-	${PCL_LIBRARIES}
-)
-
-add_executable(density_controll_of_pointcloud_ src/density_controll_of_pointcloud_.cpp)
-target_link_libraries(density_controll_of_pointcloud_
-	${catkin_LIBRARIES}
-	${OpenCV_LIBRARIES}
-	${PCL_LIBRARIES}
-)
-
-add_executable(density_controll_of_pointcloud_test1 src/density_controll_of_pointcloud_test1.cpp)
-target_link_libraries(density_controll_of_pointcloud_test1
-	${catkin_LIBRARIES}
-	${OpenCV_LIBRARIES}
-	${PCL_LIBRARIES}
-)
-
-add_executable(density_controll_of_pointcloud_test2 src/density_controll_of_pointcloud_test2.cpp)
-target_link_libraries(density_controll_of_pointcloud_test2
+add_executable(pointcloud_lifespan_keeper_H src/pointcloud_lifespan_keeper_H.cpp)
+target_link_libraries(pointcloud_lifespan_keeper_H
 	${catkin_LIBRARIES}
 	${OpenCV_LIBRARIES}
 	${PCL_LIBRARIES}
