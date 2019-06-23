@@ -4,7 +4,7 @@
 	<!--Transform PointCloud-->
 	<node pkg="sadayne_pointcloud" type="sq_transform_pointcloud" name="sq_transform_pointcloud" >
 		<param name="target_frame" type="string" value="centerlaser_"/>
-		<remap from="/cloud" to="/nagayne_PointCloud2/fusioned" />
+		<remap from="/cloud" to="/range_filtered_pc" />
 	</node>
 
 	<node name="sq_laser2pointcloud" pkg="sq_lidar" type="sq_laser2pointcloud">
@@ -17,6 +17,12 @@
 		<remap from="~/cloud" to="/cloud" />
 	</node>
 
+	<node name="max_range_filter" pkg="range_filter_for_LiDAR" type="max_range_filter">
+		<param name="border_range" type="double" value="29.9" />
+		<remap from="/lidar_pc" to="/nagayne_PointCloud2/fusioned" />
+	</node>
+
+
 	<node pkg="unflatness_evaluator" type="unflatness_calculator" name="unflatness_calculator"/>
 	
 	<node pkg="nagayne_pointcloud" name="pointcloud_hub" type="pointcloud_hub"/>
@@ -25,20 +31,22 @@
 		<param name="uf_score_rate" type="double" value="1.0"/>
 		<param name="distance_score" type="double" value="1.0"/>
 		<param name="min_lifespan" type="double" value="10.0"/>
+		<param name="hokuyo_max_range" type="double" value="30.0"/>
 		<remap from="/nagayne_PointCloud2/fusioned" to="/cloud/tf" />
 	</node>
 
-	<node name="rm_ground_lcl"  pkg="sadayne_pointcloud" type="rm_ground_lcl">
-		<param name="save_num" type="int" value="60"/>
-		<remap from="/cloud" to="/cloud/tf" />
-	</node>
 
-
-	<node name="rm_node20" pkg="velodyne_height_map" type="rm_node20" >
-		<remap from="/perfect_velodyne/normal" to="/nagayne_PointCloud2/density_controlled" />
-	</node>
-	
-	<include file="$(find sq_lidar)/launch/human_detection_3dlidar.launch"/>
+	<!-- <node name="rm_ground_lcl"  pkg="sadayne_pointcloud" type="rm_ground_lcl"> -->
+	<!-- 	<param name="save_num" type="int" value="60"/> -->
+	<!-- 	<remap from="/cloud" to="/cloud/tf" /> -->
+	<!-- </node> -->
+    <!--  -->
+    <!--  -->
+	<!-- <node name="rm_node20" pkg="velodyne_height_map" type="rm_node20" > -->
+	<!-- 	<remap from="/perfect_velodyne/normal" to="/nagayne_PointCloud2/density_controlled" /> -->
+	<!-- </node> -->
+	<!--  -->
+	<!-- <include file="$(find sq_lidar)/launch/human_detection_3dlidar.launch"/> -->
 
 	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/stay.bag &#45;r 1"/> -->
 	<node pkg="rosbag" name="player" type="play" args="--clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/move.bag -r 1"/>

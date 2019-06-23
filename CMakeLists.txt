@@ -169,15 +169,15 @@ target_link_libraries(pointcloud_hub
 	${PCL_LIBRARIES}
 )
 
-add_executable(pointcloud_lifespan_keeper src/pointcloud_lifespan_keeper.cpp)
-target_link_libraries(pointcloud_lifespan_keeper
+add_executable(pointcloud_lifespan_controller src/pointcloud_lifespan_controller.cpp)
+target_link_libraries(pointcloud_lifespan_controller
 	${catkin_LIBRARIES}
 	${OpenCV_LIBRARIES}
 	${PCL_LIBRARIES}
 )
 
-add_executable(pointcloud_lifespan_keeper_H src/pointcloud_lifespan_keeper_H.cpp)
-target_link_libraries(pointcloud_lifespan_keeper_H
+add_executable(pointcloud_lifespan_controller_H src/pointcloud_lifespan_controller_H.cpp)
+target_link_libraries(pointcloud_lifespan_controller_H
 	${catkin_LIBRARIES}
 	${OpenCV_LIBRARIES}
 	${PCL_LIBRARIES}

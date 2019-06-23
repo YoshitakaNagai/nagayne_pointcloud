@@ -1,5 +1,5 @@
 /*
- *	density controller of nagayne_pointcloud
+ *	lifespan controller of nagayne_pointcloud
  *
  * 	author : Yoshitaka Nagai
  */
@@ -45,7 +45,7 @@ class Nagayne
 		void odom_callback(const nav_msgs::OdometryConstPtr&);
 		void fresh_pc_callback(const sensor_msgs::PointCloud2ConstPtr&);
 		
-		void controll_density(void);
+		void pc_lifespan_controller(void);
 		void pt_lifespan_keeper(void);
 		void scorekeeper(void);
 		CloudIUTPtr pc_downsampling(void);
@@ -58,8 +58,8 @@ class Nagayne
 		bool tf_listen_flag = false;
 
 		float Hz = 100;
-		float Hokuyo_UTM_30LX_FEW_max_range = 30.0;
-
+		
+		double hokuyo_max_range;
 		double uf_score_rate, distance_score, min_lifespan;
 				
 		ros::Subscriber sub_pc;
@@ -87,10 +87,10 @@ class Nagayne
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "density_controll_of_pointcloud_v4");
+    ros::init(argc, argv, "pointcloud_lifespan_keeper");
 	
 	Nagayne nagayne_pointcloud;
-	nagayne_pointcloud.controll_density();
+	nagayne_pointcloud.pc_lifespan_controller();
 	
 	return 0;
 }
@@ -104,15 +104,16 @@ Nagayne::Nagayne(void)
 	nh.getParam("uf_score_rate", uf_score_rate);
 	nh.getParam("distance_score", distance_score);
 	nh.getParam("min_lifespan", min_lifespan);
+	nh.getParam("hokuyo_max_range", hokuyo_max_range);
 
 	sub_pc = n.subscribe("/nagayne_PointCloud2/fusioned", 30, &Nagayne::fresh_pc_callback, this);
     sub_odom = n.subscribe("/odom", 30, &Nagayne::odom_callback, this);
 
-	DCP_pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/density_controlled", 30);
+	DCP_pub = n.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/lifespan_controlled", 30);
 }
 
 
-void Nagayne::controll_density(void)
+void Nagayne::pc_lifespan_controller(void)
 {
 	ros::Rate r(Hz);
 	while(ros::ok()){
@@ -189,7 +190,7 @@ void Nagayne::scorekeeper(void)
 		float unflatness_score = pt.s/2;
 		float score = (float)uf_score_rate * unflatness_score + (float)min_lifespan;
 		pt.v = score;
-		//pt.v = (float)distance_score * sqrt(pow(pt.x,2) + pow(pt.y,2) + pow(pt.z,2)) / Hokuyo_UTM_30LX_FEW_max_range + min_lifespan;
+		//pt.v = (float)distance_score * sqrt(pow(pt.x,2) + pow(pt.y,2) + pow(pt.z,2)) / (float)hokuyo_max_range + min_lifespan;
 	}
 }
 
