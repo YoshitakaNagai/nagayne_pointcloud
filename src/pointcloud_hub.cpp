@@ -69,8 +69,8 @@ FusionPC::FusionPC(void)
 	intensity_flag = false;
 	unflatness_flag = false;
 
-	intensity_sub_pc = nh.subscribe("/cloud", 10, &FusionPC::intensity_callback, this);
-	unflatness_sub_pc = nh.subscribe("/nagayne_PointCloud2/unflatness", 10, &FusionPC::unflatness_callback, this);
+	intensity_sub_pc = nh.subscribe("/range_filtered_pc/intensity", 10, &FusionPC::intensity_callback, this);
+	unflatness_sub_pc = nh.subscribe("/range_filtered_pc/unflatness", 10, &FusionPC::unflatness_callback, this);
 	//fusioned_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("/nagayne_PointCloud2/fusioned", 1);
 	fusioned_cloud_pub = nh.advertise<CloudIUT>("/nagayne_PointCloud2/fusioned", 10);
 }

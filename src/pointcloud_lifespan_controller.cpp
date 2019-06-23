@@ -177,7 +177,7 @@ void Nagayne::odom_callback(const nav_msgs::OdometryConstPtr &msg)
 
 void Nagayne::pt_lifespan_keeper(void)
 {
-	float dt = 1/Hz;
+	float dt = 0.01;
 	for(auto& pt : veteran_pc_->points){
 		pt.v -= dt;
 	}
@@ -189,6 +189,7 @@ void Nagayne::scorekeeper(void)
 	for(auto& pt : fresh_pc_->points){
 		float unflatness_score = pt.s/2;
 		float score = (float)uf_score_rate * unflatness_score + (float)min_lifespan;
+		std::cout << "score : " << score << std::endl;
 		pt.v = score;
 		//pt.v = (float)distance_score * sqrt(pow(pt.x,2) + pow(pt.y,2) + pow(pt.z,2)) / (float)hokuyo_max_range + min_lifespan;
 	}

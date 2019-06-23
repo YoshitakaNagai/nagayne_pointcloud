@@ -4,24 +4,30 @@
 	<!--Transform PointCloud-->
 	<node pkg="sadayne_pointcloud" type="sq_transform_pointcloud" name="sq_transform_pointcloud" >
 		<param name="target_frame" type="string" value="centerlaser_"/>
-		<remap from="/cloud" to="/range_filtered_pc" />
+		<remap from="/cloud" to="/nagayne_PointCloud2/fusioned" />
 	</node>
 
 	<node name="sq_laser2pointcloud" pkg="sq_lidar" type="sq_laser2pointcloud">
 		<param name="fixed_frame" value="base_link" />
 	</node>
+	
+	<node name="max_range_filter" pkg="range_filter_for_LiDAR" type="max_range_filter">
+		<param name="border_range" type="double" value="30.0" />
+		<remap from="/lidar_pc" to="/sq_lidar/unflatness_pc" />
+		<remap from="/range_filtered_pc" to="/range_filtered_pc/unflatness" />
+	</node>
 
 	<node name="scan_to_cloud2" pkg="sq_lidar" type="sq_lidar">
 		<param name="fixed_frame" value="base_link" />
 		<remap from="~/scan" to="/sq_lidar/scan" />
-		<remap from="~/cloud" to="/cloud" />
+		<!-- <remap from="~/cloud" to="/cloud" /> -->
 	</node>
 
-	<node name="max_range_filter" pkg="range_filter_for_LiDAR" type="max_range_filter">
-		<param name="border_range" type="double" value="29.9" />
-		<remap from="/lidar_pc" to="/nagayne_PointCloud2/fusioned" />
+	<node name="max_range_filter_sub" pkg="range_filter_for_LiDAR" type="max_range_filter_sub">
+		<param name="border_range" type="double" value="30.0" />
+		<remap from="/lidar_pc" to="/sq_lidar/intensity_pc" />
+		<remap from="/range_filtered_pc" to="/range_filtered_pc/intensity" />
 	</node>
-
 
 	<node pkg="unflatness_evaluator" type="unflatness_calculator" name="unflatness_calculator"/>
 	
@@ -49,7 +55,7 @@
 	<!-- <include file="$(find sq_lidar)/launch/human_detection_3dlidar.launch"/> -->
 
 	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/stay.bag &#45;r 1"/> -->
-	<node pkg="rosbag" name="player" type="play" args="--clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/move.bag -r 1"/>
+	<node pkg="rosbag" name="player" type="play" args="--clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/move.bag"/>
 	<!-- <node pkg="rosbag" name="player" type="play" args="&#45;&#45;clock /home/amsl/bagfiles/sq2/sq_lidar/nagayne_pointcloud/human_detection.bag &#45;r 1"/> -->
 	<node pkg="rviz" name="rviz" type="rviz" args="-d /home/amsl/.rviz/nagayne_pointcloud_v2.rviz"/>
 </launch>
