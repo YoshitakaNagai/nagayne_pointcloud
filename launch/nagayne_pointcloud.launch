@@ -33,10 +33,10 @@
 	
 	<node pkg="nagayne_pointcloud" name="pointcloud_hub" type="pointcloud_hub"/>
 	
-	<node name="pointcloud_lifespan_keeper"  pkg="nagayne_pointcloud" type="pointcloud_lifespan_keeper" output="screen">
+	<node name="pointcloud_lifespan_controller"  pkg="nagayne_pointcloud" type="pointcloud_lifespan_controller" output="screen">
 		<param name="uf_score_rate" type="double" value="1.0"/>
 		<param name="distance_score" type="double" value="1.0"/>
-		<param name="min_lifespan" type="double" value="10.0"/>
+		<param name="min_lifespan" type="double" value="1.0"/>
 		<param name="hokuyo_max_range" type="double" value="30.0"/>
 		<remap from="/nagayne_PointCloud2/fusioned" to="/cloud/tf" />
 	</node>

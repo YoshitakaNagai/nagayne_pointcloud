@@ -187,7 +187,7 @@ void Nagayne::pt_lifespan_keeper(void)
 void Nagayne::scorekeeper(void)
 {
 	for(auto& pt : fresh_pc_->points){
-		float unflatness_score = pt.s/2;
+		float unflatness_score = 0.5 * pt.s;
 		float score = (float)uf_score_rate * unflatness_score + (float)min_lifespan;
 		std::cout << "score : " << score << std::endl;
 		pt.v = score;
